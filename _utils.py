@@ -221,7 +221,8 @@ def read_concode_examples(filename, data_num):
                 Example(
                     idx=idx,
                     source=x["nl"].strip(),
-                    target=x["code"].strip()
+                    # target=x["code"].strip()
+                    target=' '.join(x["code"])
                 )
             )
             idx += 1
