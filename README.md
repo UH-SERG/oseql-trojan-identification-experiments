@@ -3,7 +3,7 @@ This repository has been forked from Salesforce's CodeT5 [repo](https://github.c
 # Quick steps to start working with this repo:
 
 - Set the work directory of the project, provide the full path of place where
-  you have set up the repo (CodeT5-experiments_v2), here `sh/exp_with_args.sh` line 1.
+  you have set up this repo, here `sh/exp_with_args.sh` line 1.
 
 - Turn on/off training/eval/testing by adding/removing the respective options here:
   `sh/exp_with_args.sh` line 88.
