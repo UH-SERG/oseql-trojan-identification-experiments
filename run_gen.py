@@ -27,6 +27,7 @@ import numpy as np
 from tqdm import tqdm
 import multiprocessing
 import time
+import sys
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -39,6 +40,7 @@ from evaluator.CodeBLEU import calc_code_bleu
 from evaluator.bleu import _bleu
 from utils import get_filenames, get_elapse_time, load_and_cache_gen_data
 from configs import add_args, set_seed, set_dist
+
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
@@ -80,24 +82,34 @@ def eval_ppl_epoch(args, eval_data, eval_examples, model, tokenizer):
 
 
 def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag, criteria):
-    logger.info("  ***** Running bleu evaluation on {} data*****".format(split_tag))
+    logger.info(" (run_gen.py)  ***** Running bleu evaluation on {} data*****".format(split_tag))
     logger.info("  Num examples = %d", len(eval_examples))
     logger.info("  Batch size = %d", args.eval_batch_size)
+    logger.info("  Eval data len = %d", len(eval_data))
     eval_sampler = SequentialSampler(eval_data)
+    sample_batch_data = None  # Has no direct use now. (May be useful to get Neuron Coverage later)
     if args.data_num == -1:
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size,
                                      num_workers=4, pin_memory=True)
     else:
         eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
+    logger.info(type(eval_dataloader))
     model.eval()
     pred_ids = []
     bleu, codebleu = 0.0, 0.0
     for batch in tqdm(eval_dataloader, total=len(eval_dataloader), desc="Eval bleu for {} set".format(split_tag)):
         source_ids = batch[0].to(args.device)
         source_mask = source_ids.ne(tokenizer.pad_token_id)
+        logger.info("start loop")
         with torch.no_grad():
+            #inputs = {'input_ids': batch[0]}
+            inputs = source_ids 
+
+            if sample_batch_data is None:  # for NC
+                sample_batch_data = inputs
             if args.model_type == 'roberta':
+                logger.info("Model has been invoked with inputs to obtain predictions.")
                 preds = model(source_ids=source_ids, source_mask=source_mask)
 
                 top_preds = [pred[0].cpu().numpy() for pred in preds]
@@ -161,7 +173,71 @@ def eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, split_tag,
     for key in sorted(result.keys()):
         logger.info("  %s = %s", key, str(round(result[key], 4)))
 
-    return result
+    return sample_batch_data, result
+
+
+def get_detailed_arch(model):
+    with open("arch_components.txt", "w") as file3:
+        global_layer = 0
+        file3.write("Main Model: " + str(type(model).__name__)+"\n")
+        for child in model.children():
+            file3.write("-------------------------------------------------------------------\n")
+            child_name = str(type(child).__name__)
+            file3.write("Component hierarchy of "+child_name+"\n")
+            file3.write("-------------------------------------------------------------------\n")
+            file3.write(str(child)+"\n")
+            file3.write("-------------------------------------------------------------------\n")
+            file3.write("Component list of "+child_name+"\n")
+            file3.write("-------------------------------------------------------------------\n")
+            prev_layer_num=-1
+            for component, params in child.named_parameters():
+                if "layer" in component:
+                    component_name_parts = component.split(".")
+                    if "layers" in component:
+                       layer_num_idx = component_name_parts.index("layers")+1
+                    else:
+                       layer_num_idx = component_name_parts.index("layer")+1
+
+                    layer_num = str(component_name_parts[layer_num_idx])
+                    if layer_num!=prev_layer_num:
+                        global_layer+=1
+                        prev_layer_num=layer_num
+                    file3.write("gl."+str(global_layer)+"."+child_name+"."+str(component)+"\n")
+                else:
+                    file3.write("gl_not_real_layer."+str(global_layer)+"."+child_name+"."+str(component)+"\n")
+        sys.exit(1)
+
+def get_weights(model):
+    global_layer = 0
+    for child in model.children():
+        child_name = str(type(child).__name__)
+        prev_layer_num=-1
+        for component, params in tqdm(child.named_parameters()):
+            if "layer" in component:
+                component_name_parts = component.split(".")
+                if "layers" in component:
+                   layer_num_idx = component_name_parts.index("layers")+1
+                else:
+                   layer_num_idx = component_name_parts.index("layer")+1
+
+                layer_num = str(component_name_parts[layer_num_idx])
+                if layer_num!=prev_layer_num:
+                    global_layer+=1
+                    prev_layer_num=layer_num
+                opfile = open("gl."+str(global_layer)+"."+child_name+"."+str(component)+".csv","w")
+                
+            else:
+                opfile = open("gl_not_real_layer."+str(global_layer)+"."+child_name+"."+str(component)+".csv","w")
+            for tnsr in tqdm(params):
+              if tnsr.dim()!=0:
+                for val in tnsr:
+                    opfile.write(str(float(val))+"\n")
+              else:
+                opfile.write(str(float(tnsr.item()))+"\n")
+            opfile.close()
+
+    sys.exit(1)
+
 
 
 def main():
@@ -177,6 +253,15 @@ def main():
     if args.n_gpu > 1:
         # for DataParallel
         model = torch.nn.DataParallel(model)
+
+    ####################### Weight Extraction Code (Do not use when you want to train/evaluate model)  ######################
+    file = os.path.join(args.output_dir, 'checkpoint-best-bleu/pytorch_model.bin')
+    logger.info("Reload model from {}".format(file))
+    model.load_state_dict(torch.load(file))
+    get_detailed_arch(model) # NOTE: Exits
+    get_weights(model) # NOTE: Exits
+    ####################### End of Weight Extraction Code ###################################################################
+
     pool = multiprocessing.Pool(args.cpu_cont)
     args.train_filename, args.dev_filename, args.test_filename = get_filenames(args.data_dir, args.task, args.sub_task)
     fa = open(os.path.join(args.output_dir, 'summary.log'), 'a+')
@@ -311,7 +396,7 @@ def main():
                     eval_examples, eval_data = load_and_cache_gen_data(args, args.dev_filename, pool, tokenizer, 'dev',
                                                                        only_src=True, is_sample=True)
 
-                    result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'dev', 'e%d' % cur_epoch)
+                    sample_batch_data, result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'dev', 'e%d' % cur_epoch)
                     dev_bleu, dev_em = result['bleu'], result['em']
                     if args.task in ['summarize']:
                         dev_bleu_em = dev_bleu
@@ -368,7 +453,8 @@ def main():
             model.load_state_dict(torch.load(file))
             eval_examples, eval_data = load_and_cache_gen_data(args, args.test_filename, pool, tokenizer, 'test',
                                                                only_src=True, is_sample=False)
-            result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'test', criteria)
+            sample_batch_data, result = eval_bleu_epoch(args, eval_data, eval_examples, model, tokenizer, 'test', criteria)
+
             test_bleu, test_em = result['bleu'], result['em']
             test_codebleu = result['codebleu'] if 'codebleu' in result else 0
             result_str = "[%s] bleu-4: %.2f, em: %.4f, codebleu: %.4f\n" % (criteria, test_bleu, test_em, test_codebleu)
