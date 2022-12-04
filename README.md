@@ -11,7 +11,7 @@ This repository has been forked from Salesforce's CodeT5 [repo](https://github.c
 - Change **num of epochs** of training for any task in the function `get_args_by_task_model` in
   `sh/run_exp.py`.
 
-- To do **weight extraction** of a model, uncomment the code in Lines 258-262 in `run_gen.py`, and
+- To do **weight extraction** of a model, uncomment the code in Lines 258-262 (see [here](https://github.com/UH-SERG/Experiment-for-Weight-CI/blob/caf79adb924f5e30729bfb6efbd8cca3292aa923/run_gen.py#L257)) in `run_gen.py`, and
   add the model path relative to the output folder (sh/saved_models). NOTE:
   comment this code if you wish to train/evaluate/test model.
  
