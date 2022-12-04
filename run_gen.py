@@ -2,6 +2,7 @@
 # Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
 # Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 #
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -205,7 +206,6 @@ def get_detailed_arch(model):
                     file3.write("gl."+str(global_layer)+"."+child_name+"."+str(component)+"\n")
                 else:
                     file3.write("gl_not_real_layer."+str(global_layer)+"."+child_name+"."+str(component)+"\n")
-        sys.exit(1)
 
 def get_weights(model):
     global_layer = 0
@@ -238,8 +238,6 @@ def get_weights(model):
 
     sys.exit(1)
 
-
-
 def main():
     parser = argparse.ArgumentParser()
     args = add_args(parser)
@@ -258,7 +256,7 @@ def main():
     file = os.path.join(args.output_dir, 'checkpoint-best-bleu/pytorch_model.bin')
     logger.info("Reload model from {}".format(file))
     model.load_state_dict(torch.load(file))
-    get_detailed_arch(model) # NOTE: Exits
+    get_detailed_arch(model)
     get_weights(model) # NOTE: Exits
     ####################### End of Weight Extraction Code ###################################################################
 
