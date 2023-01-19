@@ -21,4 +21,13 @@ This repository has been forked from Salesforce's CodeT5 [repo](https://github.c
 - We get csv output files with the values for each model component. Here is a couple of examples of outputfile names, `gl.9.RobertaModel.encoder.layer.8.attention.self.value.weight.csv`, `gl.9.RobertaModel.encoder.layer.8.attention.self.key.bias.csv`, where the initial part `(gl.X)` indicates the global layer number. The rest is the description of the component.
 - The function `get_detailed_arch` in `run_gen.py` returns a text file (`arch_components.txt`) that provides a description of all the components in the model, with global layer ids assigned to each component.
 
+# Execution:
+
+```
+cd sh && python run_exp.py --model_tag codebert --task concode --sub_task none
+```
+
+(While concode task is not being performed in weight extraction, the command invokes the run_gen.py script where the weight extraction code 
+has been implemented.)
+
 
