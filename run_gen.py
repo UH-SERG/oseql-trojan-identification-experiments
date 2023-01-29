@@ -238,6 +238,23 @@ def get_weights(model):
 
     sys.exit(1)
 
+def zero_out_biases(model):
+    sd = model.state_dict()
+    for pair in sd.items():
+        if "bias" in pair[0]:
+          dim = len(pair[1].shape)
+          assert(dim<=2)
+          if dim == 1:
+            size = pair[1].shape[0]
+            sd[pair[0]] = torch.zeros(size) 
+          if dim == 2:
+            size1 = pair[1].shape[0]
+            size2 = pair[1].shape[1]
+            sd[pair[0]] = torch.zeros(size1,size2) 
+    model.load_state_dict(sd) 
+    logger.info("You have set biases of the model to 0!")
+    return model
+
 def main():
     parser = argparse.ArgumentParser()
     args = add_args(parser)
@@ -259,6 +276,10 @@ def main():
     get_detailed_arch(model)
     get_weights(model) # NOTE: Exits
     ####################### End of Weight Extraction Code ###################################################################
+
+    ####################### Bias Modification Code ##########################################################################
+    model = zero_out_biases(model)
+    ####################### End of Bias Modification Code ##################################################################
 
     pool = multiprocessing.Pool(args.cpu_cont)
     args.train_filename, args.dev_filename, args.test_filename = get_filenames(args.data_dir, args.task, args.sub_task)
