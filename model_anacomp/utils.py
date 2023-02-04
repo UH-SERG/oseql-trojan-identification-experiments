@@ -47,7 +47,8 @@ def get_children(module, opfile, space_size):
 
 def _get_detailed_arch(model):
     """
-    Outputs arch_components.txt, a file showing the architecture of the model.
+    Outputs arch_components.txt, a file showing the architecture of the model, 
+    with global layer ids assigned to each component.
     """
 
     with open("arch_components.txt", "w") as file3:
@@ -82,6 +83,12 @@ def _get_detailed_arch(model):
 def _get_weights(model):
     """
     Generates .csv files consisting of weights for each layer in the model.
+    
+    Output filename Description: 
+      `(gl.X)` indicates the global layer number. The rest is the 
+      description of the component. Example File names:
+      - gl.9.RobertaModel.encoder.layer.8.attention.self.value.weight.csv 
+      - gl.9.RobertaModel.encoder.layer.8.attention.self.key.bias.csv
     """
 
     global_layer = 0
