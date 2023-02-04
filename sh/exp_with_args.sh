@@ -1,4 +1,4 @@
-WORKDIR="your_CodeT5_path/CodeT5"
+WORKDIR="/scratch1/CodeT5-original-gpu0/CodeT5"
 export PYTHONPATH=$WORKDIR
 
 TASK=${1}
@@ -16,6 +16,7 @@ WARMUP=${12}
 MODEL_DIR=${13}
 SUMMARY_DIR=${14}
 RES_FN=${15}
+ANACOMP=${16}
 
 if [[ $DATA_NUM == -1 ]]; then
   DATA_TAG='all'
@@ -90,5 +91,5 @@ CUDA_VISIBLE_DEVICES=${GPU} \
   --tokenizer_name=${TOKENIZER}  --model_name_or_path=${MODEL_PATH} --data_dir ${WORKDIR}/data  \
   --cache_path ${CACHE_DIR}  --output_dir ${OUTPUT_DIR}  --summary_dir ${SUMMARY_DIR} \
   --save_last_checkpoints --always_save_model --res_dir ${RES_DIR} --res_fn ${RES_FN} \
-  --train_batch_size ${BS} --eval_batch_size ${BS} --max_source_length ${SRC_LEN} --max_target_length ${TRG_LEN} \
+  --train_batch_size ${BS} --eval_batch_size ${BS} --max_source_length ${SRC_LEN} --max_target_length ${TRG_LEN} --anacomp ${ANACOMP} \
   2>&1 | tee ${LOG}

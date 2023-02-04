@@ -41,6 +41,7 @@ from evaluator.CodeBLEU import calc_code_bleu
 from evaluator.bleu import _bleu
 from utils import get_filenames, get_elapse_time, load_and_cache_gen_data
 from configs import add_args, set_seed, set_dist
+from model_anacomp.utils import anacomp_run 
 
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
@@ -269,21 +270,14 @@ def main():
         # for DataParallel
         model = torch.nn.DataParallel(model)
 
-    ####################### Weight Extraction Code (Do not use when you want to train/evaluate model)  ######################
-    file = os.path.join(args.output_dir, 'checkpoint-best-bleu/pytorch_model.bin')
-    logger.info("Reload model from {}".format(file))
-    model.load_state_dict(torch.load(file))
-    get_detailed_arch(model)
-    get_weights(model) # NOTE: Exits
-    ####################### End of Weight Extraction Code ###################################################################
-
-    ####################### Bias Modification Code ##########################################################################
-    model = zero_out_biases(model)
-    ####################### End of Bias Modification Code ##################################################################
-
     pool = multiprocessing.Pool(args.cpu_cont)
     args.train_filename, args.dev_filename, args.test_filename = get_filenames(args.data_dir, args.task, args.sub_task)
     fa = open(os.path.join(args.output_dir, 'summary.log'), 'a+')
+
+    if args.anacomp == 1:
+       logger.info("***** Running Anacomp Only *****")
+       anacomp_run(model)
+       sys.exit(1)
 
     if args.do_train:
         if args.local_rank in [-1, 0] and args.data_num == -1:

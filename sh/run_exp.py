@@ -4,15 +4,15 @@ import argparse
 
 
 def get_cmd(task, sub_task, model_tag, gpu, data_num, bs, lr, source_length, target_length, patience, epoch, warmup,
-            model_dir, summary_dir, res_fn, max_steps=None, save_steps=None, log_steps=None):
+            model_dir, summary_dir, res_fn, max_steps=None, save_steps=None, log_steps=None, anacomp=0):
     if max_steps is None:
-        cmd_str = 'bash exp_with_args.sh %s %s %s %d %d %d %d %d %d %d %d %d %s %s %s' % \
+        cmd_str = 'bash exp_with_args.sh %s %s %s %d %d %d %d %d %d %d %d %d %s %s %s %d' % \
                   (task, sub_task, model_tag, gpu, data_num, bs, lr, source_length, target_length, patience, epoch,
-                   warmup, model_dir, summary_dir, res_fn)
+                   warmup, model_dir, summary_dir, res_fn, anacomp)
     else:
-        cmd_str = 'bash exp_with_args.sh %s %s %s %d %d %d %d %d %d %d %d %d %s %s %s %d %d %d' % \
+        cmd_str = 'bash exp_with_args.sh %s %s %s %d %d %d %d %d %d %d %d %d %s %s %s %d %d %d %d' % \
                   (task, sub_task, model_tag, gpu, data_num, bs, lr, source_length, target_length, patience, epoch,
-                   warmup, model_dir, summary_dir, res_fn, max_steps, save_steps, log_steps)
+                   warmup, model_dir, summary_dir, res_fn, max_steps, save_steps, log_steps, anacomp)
     return cmd_str
 
 
@@ -53,14 +53,14 @@ def get_args_by_task_model(task, sub_task, model_tag):
         # [TOKENIZE] avg src len: 213, avg trg len: 33, max src len: 2246, max trg len: 264
         src_len = 320
         trg_len = 150
-        epoch = 30
+        epoch = 50
         patience = 3
     elif task == 'defect':
         # Read 21854 examples, avg src len: 187, avg trg len: 1, max src len: 12195, max trg len: 1
         # [TOKENIZE] avg src len: 597, avg trg len: 1, max src len: 41447, max trg len: 1
         src_len = 512
         trg_len = 3
-        epoch = 10
+        epoch = 50
         patience = 2
     elif task == 'clone':
         # Read 901028 examples, avg src len: 120, avg trg len: 123, max src len: 5270, max trg len: 5270
@@ -104,7 +104,7 @@ def run_one_exp(args):
                       data_num=args.data_num, bs=bs, lr=lr, source_length=src_len, target_length=trg_len,
                       patience=patience, epoch=epoch, warmup=1000,
                       model_dir=args.model_dir, summary_dir=args.summary_dir,
-                      res_fn='{}/{}_{}.txt'.format(args.res_dir, args.task, args.model_tag))
+                      res_fn='{}/{}_{}.txt'.format(args.res_dir, args.task, args.model_tag), anacomp = args.anacomp)
     print('%s\n' % cmd_str)
     os.system(cmd_str)
 
@@ -153,6 +153,7 @@ if __name__ == '__main__':
     parser.add_argument("--summary_dir", type=str, default='tensorboard', help='directory to save tensorboard summary')
     parser.add_argument("--data_num", type=int, default=-1, help='number of data instances to use, -1 for full data')
     parser.add_argument("--gpu", type=int, default=0, help='index of the gpu to use in a cluster')
+    parser.add_argument("--anacomp", type=int, default=0, help='perform anacomp functions on model')
     args = parser.parse_args()
 
     if not os.path.exists(args.res_dir):

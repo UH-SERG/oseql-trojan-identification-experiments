@@ -97,6 +97,8 @@ def add_args(parser):
                         help="For distributed training: local_rank")
     parser.add_argument('--seed', type=int, default=1234,
                         help="random seed for initialization")
+    parser.add_argument('--anacomp', type=int, default=0,
+                        help='perform anacomp functions on model')
     args = parser.parse_args()
 
     if args.task in ['summarize']:

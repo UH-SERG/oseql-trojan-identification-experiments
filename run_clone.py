@@ -45,6 +45,7 @@ import time
 from configs import add_args, set_seed
 from utils import get_filenames, get_elapse_time, load_and_cache_clone_data
 from models import get_model_size
+from model_anacomp.utils import anacomp_run 
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
                  't5': (T5Config, T5ForConditionalGeneration, T5Tokenizer),
@@ -152,6 +153,11 @@ def main():
     pool = multiprocessing.Pool(cpu_cont)
     args.train_filename, args.dev_filename, args.test_filename = get_filenames(args.data_dir, args.task, args.sub_task)
     fa = open(os.path.join(args.output_dir, 'summary.log'), 'a+')
+
+    if args.anacomp == 1:
+       logger.info("***** Running Anacomp Only *****")
+       anacomp_run(model)
+       sys.exit(1)
 
     if args.do_train:
         if args.n_gpu > 1:
