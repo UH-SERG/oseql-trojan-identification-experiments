@@ -274,6 +274,22 @@ def _get_layers_info(model):
           layers_info[layer_name] = layer_data  
     return layers_info
 
+def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
+    """
+    Sets the value of a param to 0. Changes the state dictionary of a model.
+    """
+    if col_idx == None:
+      sd[layer_name][row_idx] = 10
+      '''
+      # Test code
+
+      if layer_name == 'encoder.encoder.layer.11.output.dense.bias' and row_idx == 746:
+          print('In zero out!',layer_name, sd[layer_name][row_idx], row_idx)
+      '''
+    else:
+      #print(sd[layer_name][row_idx,col_idx])
+      sd[layer_name][row_idx,col_idx] = 10
+
 def _zero_out_tensor_params(sd, layer_name, row_no, start, end):
     # NOTE: not part of minimization algorithm. Just use it
     # independently for testing purposes.
