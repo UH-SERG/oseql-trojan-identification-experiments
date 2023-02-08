@@ -448,6 +448,17 @@ def _zero_out_all_bias_params(model):
     logger.info("You have set all biases of the model to 0!")
     return model
 
+def _get_param_chunks(params, chunk_size):
+    i=0
+    chunks = []
+    while i < len(params)-1: 
+      chunk = {}
+      chunk['start'] = i
+      chunk['end'] = min(i+chunk_size-1,len(params)-1)
+      chunks.append(chunk)
+      i+=chunk_size
+    return chunks
+
 class MyDD(DD.DD):
     def __init__(self):
         DD.DD.__init__(self)
