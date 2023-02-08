@@ -175,24 +175,26 @@ def _get_layers_info(model):
           layers_info[layer_name] = layer_data  
     return layers_info
 
-def _zero_out_params_2d(model, layer_name, row_no, start, end):
+def _zero_out_tensor_params(sd, layer_name, row_no, start, end):
+    # NOTE: not part of minimization algorithm. Just use it
+    # independently for testing purposes.
     """
     Sets a subset of a tensor to zero, starting from element at index 'start'
     to that at index 'end'.
 
     Args:
-        model (The Model Type): The loaded model.
+        sd (dictionary): The state dictionary of the model. 
         layer_name (string): The name of the layer.
         row_no (int): The row you want to change.
         start (int): The index of the first element you want to change. 
         end (int): The index of the last element you want to change. 
 
     Returns:
-        The model with modified weights.
+        The state dictionary with modified weights.
     """
 
-    sd = model.state_dict()
-    two_d_matrix = sd[layer_name] 
+    tensor = sd[layer_name] 
+    sub_tensor = None
 
     '''
     # Test code
@@ -206,12 +208,24 @@ def _zero_out_params_2d(model, layer_name, row_no, start, end):
     sys.exit(1)
     '''
 
-    assert(len(two_d_matrix.shape) == 2)
-    sub_tensor = two_d_matrix[row_no,:]
+    assert(len(tensor.shape) <= 2)
+
+    if len(tensor.shape) == 2:
+      sub_tensor = tensor[row_no,:]
+    elif len(tensor.shape) == 1:
+      sub_tensor = tensor
+
+    assert(sub_tensor.shape[0]>= start)
+    assert(sub_tensor.shape[0]>= end)
 
     num_zero_vals = end - start + 1 
     zeros = torch.zeros(num_zero_vals)
 
+    print('tensor shape',tensor.shape)
+    print('num 0 vals',num_zero_vals)
+    print('zeros shape',zeros.shape)
+    print('subtensor shape',sub_tensor.shape)
+    print('subtensor part shape', sub_tensor[start:end+1].shape)
     sub_tensor[start:end+1] = zeros
 
     '''
@@ -221,9 +235,7 @@ def _zero_out_params_2d(model, layer_name, row_no, start, end):
     print("Look here", two_d_matrix[0,0])
     '''
 
-    model.load_state_dict(sd) 
-    logger.info("Zeroed params from " + layer_name + " | Row: " + str(row_no) + " | Indices: " + str(start) + "," + str (end))
-    return model
+    return sd
     
 def _zero_out_all_bias_params(model):
     """
@@ -255,5 +267,4 @@ def anacomp_run(model):
     taking the help of the other functions in this file.
     """
     layers_info = _get_layers_info(model)
-    model = _zero_out_params_2d(model,'encoder.embeddings.word_embeddings.weight', 0, 0, 10)
 
