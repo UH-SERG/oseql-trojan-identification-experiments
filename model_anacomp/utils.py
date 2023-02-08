@@ -8,11 +8,23 @@ import logging
 import sys
 from tqdm import tqdm
 import torch
+import numpy as np
+import random 
+import DD
+import copy
+
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+##################################################
+
+anacomp_data={}
+org_sd={}
+
+##################################################
 
 def get_children(module, opfile, space_size):
     # DEPRECATED
@@ -422,11 +434,18 @@ def _zero_out_all_bias_params(model):
     logger.info("You have set all biases of the model to 0!")
     return model
 
-def anacomp_run(model):
+def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_data=None):
     """
     This is the only API we need to call from outside the anacomp module. We
     can implement the logic of the analysis we want to do in this function,
     taking the help of the other functions in this file.
     """
-    layers_info = _get_layers_info(model)
+    global org_sd
+    anacomp_data['model']=model
+    org_sd = model.state_dict()
+    anacomp_data['ddmin_test_fn']=ddmin_test_fn
+    anacomp_data['args']=args 
+    anacomp_data['eval_examples']=eval_examples
+    anacomp_data['eval_data']=eval_data
 
+    l_info = _get_layers_info(model)

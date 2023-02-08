@@ -176,6 +176,11 @@ def main():
     if args.anacomp == 1:
        logger.info("***** Running Anacomp Only *****")
        anacomp_run(model)
+
+       eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test',
+                                                          False)
+       anacomp_run(model, ddmin_test_fn=ddmin_test, args=args,
+                   eval_examples=eval_examples, eval_data=eval_data)
        sys.exit(1)
 
     if args.do_train:
