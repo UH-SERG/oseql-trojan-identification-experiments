@@ -57,6 +57,20 @@ def get_children(module, opfile, space_size):
     for child in children:
       get_children(child, opfile, space_size)
 
+def _get_chunk_data(layer, row_id, i, j):
+    # DEPRECATED
+    # See description of _get_chunk_map()
+    """
+    _get_chunk_map() helper 
+    """
+    chunk = {}
+    chunk['start'] = i
+    chunk['end']   = j
+    chunk['layer'] = layer
+    chunk['row']   = row_id
+    chunk['size'] = j - i + 1
+    return chunk
+
 def _get_chunks(layer, row_id, i, j, max_row_id, num_chunks):
     # DEPRECATED
     # See description of _get_chunk_map()
