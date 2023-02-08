@@ -175,7 +175,6 @@ def main():
 
     if args.anacomp == 1:
        logger.info("***** Running Anacomp Only *****")
-       anacomp_run(model)
 
        eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test',
                                                           False)
