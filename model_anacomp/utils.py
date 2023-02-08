@@ -274,6 +274,53 @@ def _get_layers_info(model):
           layers_info[layer_name] = layer_data  
     return layers_info
 
+def _get_layer_index_maps(l_info):
+    layers = []
+    for layer in l_info.keys():
+        layers.append(layer)
+
+    index_to_layer = {index : layer for index,layer in enumerate(layers)}
+    layer_to_index = {layer : index for index,layer in enumerate(layers)}
+    return index_to_layer, layer_to_index
+
+def _get_params(model, l_info, layer_to_index):
+
+    logger.info("Generating list of all params...")
+
+    params = []
+
+    sd = model.state_dict()
+    for layer in tqdm(l_info.keys(), desc="Scanning layers..."):
+
+      if l_info[layer]['num_dims'] == 1:
+
+        num_rows = l_info[layer]['len_dim1']
+  
+        # Loop over the rows of the tensor
+        for row_idx in tqdm(range(num_rows), leave=False, desc="Scanning params of a 1D tensor..."):
+          param_data = {}
+          param_data['layer_id'] = layer_to_index[layer]
+          param_data['row_idx'] = row_idx
+          param_data['col_idx'] = None
+          params.append(param_data)
+      
+      elif l_info[layer]['num_dims'] == 2:
+
+        # Obtain the number of rows and columns in the tensor
+        num_rows, num_cols = sd[layer].shape
+  
+        # Loop over the rows of the tensor
+        for row_idx in tqdm(range(num_rows), leave=False, desc="Scanning rows of a 2D tensor..."):
+          # Loop over the columns of the tensor
+          for col_idx in tqdm(range(num_cols), leave=False,desc="Scanning params of a 2D tensor..."):
+              param_data = {}
+              param_data['layer_id'] =layer_to_index[layer]
+              param_data['row_idx'] = row_idx
+              param_data['col_idx'] = col_idx
+              params.append(param_data)
+
+    return params
+
 def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
     """
     Sets the value of a param to 0. Changes the state dictionary of a model.
