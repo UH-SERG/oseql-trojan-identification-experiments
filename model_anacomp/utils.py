@@ -434,6 +434,95 @@ def _zero_out_all_bias_params(model):
     logger.info("You have set all biases of the model to 0!")
     return model
 
+class MyDD(DD.DD):
+    def __init__(self):
+        DD.DD.__init__(self)
+
+    def _test(self, deltas):
+        # FIXME: Set up a test function that takes a set of deltas and
+        # returns either self.PASS, self.FAIL, or self.UNRESOLVED.
+        model           = anacomp_data['model']
+        sd              = model.state_dict()
+        sd_test         = copy.deepcopy(sd)
+        callback_test   = anacomp_data['ddmin_test_fn']
+        args            = anacomp_data['args']
+        eval_examples   = anacomp_data['eval_examples']
+        eval_data       = anacomp_data['eval_data']
+        chunk_ids       = anacomp_data['chunk_ids']
+        chunks          = anacomp_data['chunks']
+        params          = anacomp_data['params']
+        index_to_layer  = anacomp_data['index_to_layer']
+
+        # Get chunks to zero_out
+
+        chunk_ids_to_delete = []
+        
+        for chunk_id in chunk_ids:
+            if chunk_id not in deltas:
+                chunk_ids_to_delete.append(chunk_id)
+
+        for chunk_id in tqdm(chunk_ids_to_delete, leave=False, 
+                             desc="Scanning chunks to remove..."):
+
+            for param_id in tqdm(range(chunks[chunk_id]['start'],
+                                 chunks[chunk_id]['end']+1), 
+                                 leave=False, 
+                                 desc="Removing parameters in the chunk..."):
+
+                layer_name = index_to_layer[params[param_id]['layer_id']]
+                row_idx = params[param_id]['row_idx']
+                col_idx = params[param_id]['col_idx']
+                '''
+                if col_idx == None:
+                  print("---------------------------------")
+                  print(layer_name,row_idx,col_idx)
+                  print(sd_test[layer_name][row_idx][col_idx])
+                  print(sd[layer_name][row_idx][col_idx])
+                '''
+                _zero_out_param(sd_test, layer_name, row_idx, col_idx)
+                '''
+                if col_idx == None:
+                  print(sd_test[layer_name][row_idx][col_idx])
+                  print(sd[layer_name][row_idx][col_idx])
+                  print("---------------------------------")
+                '''
+          
+        # Compare the values of each key
+        '''
+        for key in sd_test.keys():
+            if not torch.equal(sd_test[key], sd[key]):
+                 print("The state_dicts are different.")
+            else:
+                 print("The state_dicts are the same.")
+        '''
+        model_test = copy.deepcopy(model)
+        model_test.load_state_dict(sd_test) 
+        #assert(model_test != model)
+        callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
+
+        if 1>0:
+            return self.FAIL
+        else:
+            return self.PASS
+        return self.UNRESOLVED
+
+def ddmin():
+    deltas = anacomp_data['chunk_ids']
+    # FIXME: Insert your deltas here
+
+    mydd = MyDD()
+
+    # print("Simplifying failure-inducing input...")
+    # c = mydd.ddmin(deltas)  # Invoke DDMIN
+    # print("The 1-minimal failure-inducing input is", c)
+    # print("Removing any element will make the failure go away.")
+    # print()
+
+    print("Isolating the failure-inducing difference...")
+    (c, c1, c2) = mydd.dd(deltas)  # Invoke DD
+    print("The 1-minimal failure-inducing difference is", c)
+    #print(c1, "passes,", c2, "fails")
+
 def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_data=None):
     """
     This is the only API we need to call from outside the anacomp module. We
@@ -449,3 +538,31 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     anacomp_data['eval_data']=eval_data
 
     l_info = _get_layers_info(model)
+
+    '''
+    # Test code
+    selected_keys = list(l_info.keys())[0:195]
+    for key in selected_keys:
+        del l_info[key]
+    '''
+
+    logger.info("Generate layer indexing maps...")
+    index_to_layer, layer_to_index =_get_layer_index_maps(l_info)
+    anacomp_data['index_to_layer'] = index_to_layer
+
+    logger.info("Generate params...") 
+    params = _get_params(model, l_info, layer_to_index)
+    anacomp_data['params'] = params
+
+    chunk_size = 200
+    num_chunks = int(len(params)/chunk_size)
+
+    logger.info("Generate chunks...")
+    chunks = _get_param_chunks(params, chunk_size)
+    anacomp_data['chunks'] = chunks
+
+    logger.info("Generate chunk ids...")
+    chunk_ids = list(range(0,len(chunks)))
+    anacomp_data['chunk_ids'] = chunk_ids
+
+    ddmin()
