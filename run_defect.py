@@ -107,6 +107,30 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
 
     return result
 
+def ddmin_test(args, model, eval_examples, eval_data):
+    """
+    This is a call back function, to be called from the anacomp library.
+    We have defined it here since the implementation of 'evaluate' is 
+    in this module.
+    """
+
+    fa = open(os.path.join(args.output_dir, 'ddmin_result.log'), 'a+')
+    logger.info("  " + "***** Testing with DDmin *****")
+    logger.info("  Batch size = %d", args.eval_batch_size)
+
+    if args.n_gpu > 1:
+        # multi-gpu training
+        model = torch.nn.DataParallel(model)
+
+    result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
+    logger.info("  test_acc=%.4f", result['eval_acc'])
+    logger.info("  " + "*" * 20)
+
+    fa.write("test-acc: %.4f\n" % result['eval_acc'])
+    if args.res_fn:
+        with open(args.res_fn, 'a+') as f:
+            #f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
+            f.write("acc: %.4f\n\n" % result['eval_acc'])
 
 def main():
     parser = argparse.ArgumentParser()
