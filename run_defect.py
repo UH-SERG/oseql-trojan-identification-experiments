@@ -112,6 +112,9 @@ def ddmin_test(args, model, eval_examples, eval_data):
     This is a call back function, to be called from the anacomp library.
     We have defined it here since the implementation of 'evaluate' is 
     in this module.
+
+    Returns:
+        The accuracy of the model.
     """
 
     fa = open(os.path.join(args.output_dir, 'ddmin_result.log'), 'a+')
@@ -131,6 +134,8 @@ def ddmin_test(args, model, eval_examples, eval_data):
         with open(args.res_fn, 'a+') as f:
             #f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
             f.write("acc: %.4f\n\n" % result['eval_acc'])
+
+    return result['eval_acc']
 
 def main():
     parser = argparse.ArgumentParser()

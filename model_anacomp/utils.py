@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 anacomp_data={}
 org_sd={}
+org_score = 0
 
 ##################################################
 
@@ -352,7 +353,7 @@ def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
     Sets the value of a param to 0. Changes the state dictionary of a model.
     """
     if col_idx == None:
-      sd[layer_name][row_idx] = 10
+      sd[layer_name][row_idx] = 0
       '''
       # Test code
 
@@ -361,7 +362,7 @@ def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
       '''
     else:
       #print(sd[layer_name][row_idx,col_idx])
-      sd[layer_name][row_idx,col_idx] = 10
+      sd[layer_name][row_idx,col_idx] = 0
 
 def _zero_out_tensor_params(sd, layer_name, row_no, start, end):
     # NOTE: not part of minimization algorithm. Just use it
@@ -523,9 +524,12 @@ class MyDD(DD.DD):
         model_test = copy.deepcopy(model)
         model_test.load_state_dict(sd_test) 
         #assert(model_test != model)
-        callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
-
-        if 1>0:
+        
+        score = callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
+        
+        max_score_change = 5*org_score/100 
+        if (score >= org_score - max_score_change and 
+           score <= org_score + max_score_change) :
             return self.FAIL
         else:
             return self.PASS
@@ -555,6 +559,8 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     taking the help of the other functions in this file.
     """
     global org_sd
+    global org_score
+
     anacomp_data['model']=model
     org_sd = model.state_dict()
     anacomp_data['ddmin_test_fn']=ddmin_test_fn
@@ -564,12 +570,13 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
 
     l_info = _get_layers_info(model)
 
-    '''
+    logger.info("Evaluating the original model...")
+    org_score = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
+
     # Test code
     selected_keys = list(l_info.keys())[0:195]
     for key in selected_keys:
         del l_info[key]
-    '''
 
     logger.info("Generate layer indexing maps...")
     index_to_layer, layer_to_index =_get_layer_index_maps(l_info)
@@ -579,7 +586,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     params = _get_params(model, l_info, layer_to_index)
     anacomp_data['params'] = params
 
-    chunk_size = 200
+    chunk_size = 20000
     num_chunks = int(len(params)/chunk_size)
 
     logger.info("Generate chunks...")
