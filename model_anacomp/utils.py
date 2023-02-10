@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 ##################################################
 
 anacomp_data={}
-org_sd={}
 org_score = 0
 
 ##################################################
@@ -361,8 +360,8 @@ def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
           print('In zero out!',layer_name, sd[layer_name][row_idx], row_idx)
       '''
     else:
-      #print(sd[layer_name][row_idx,col_idx])
       sd[layer_name][row_idx,col_idx] = 0
+    return sd
 
 def _zero_out_tensor_params(sd, layer_name, row_no, start, end):
     # NOTE: not part of minimization algorithm. Just use it
@@ -467,9 +466,9 @@ class MyDD(DD.DD):
     def _test(self, deltas):
         # FIXME: Set up a test function that takes a set of deltas and
         # returns either self.PASS, self.FAIL, or self.UNRESOLVED.
-        model           = anacomp_data['model']
-        sd              = model.state_dict()
+        sd              = anacomp_data['model'].state_dict()
         sd_test         = copy.deepcopy(sd)
+        model_test      = anacomp_data['model_test']
         callback_test   = anacomp_data['ddmin_test_fn']
         args            = anacomp_data['args']
         eval_examples   = anacomp_data['eval_examples']
@@ -505,7 +504,7 @@ class MyDD(DD.DD):
                   print(sd_test[layer_name][row_idx][col_idx])
                   print(sd[layer_name][row_idx][col_idx])
                 '''
-                _zero_out_param(sd_test, layer_name, row_idx, col_idx)
+                sd_test = _zero_out_param(sd_test, layer_name, row_idx, col_idx)
                 '''
                 if col_idx == None:
                   print(sd_test[layer_name][row_idx][col_idx])
@@ -521,11 +520,10 @@ class MyDD(DD.DD):
             else:
                  print("The state_dicts are the same.")
         '''
-        model_test = copy.deepcopy(model)
         model_test.load_state_dict(sd_test) 
-        #assert(model_test != model)
-        
+
         score = callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
+
         
         max_score_change = 5*org_score/100 
         if (score >= org_score - max_score_change and 
@@ -558,11 +556,10 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     can implement the logic of the analysis we want to do in this function,
     taking the help of the other functions in this file.
     """
-    global org_sd
     global org_score
 
     anacomp_data['model']=model
-    org_sd = model.state_dict()
+    anacomp_data['model_test']=copy.deepcopy(model)
     anacomp_data['ddmin_test_fn']=ddmin_test_fn
     anacomp_data['args']=args 
     anacomp_data['eval_examples']=eval_examples
@@ -574,9 +571,11 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     org_score = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
 
     # Test code
-    selected_keys = list(l_info.keys())[0:195]
+    '''
+    selected_keys = list(l_info.keys())[5:200]
     for key in selected_keys:
         del l_info[key]
+    '''
 
     logger.info("Generate layer indexing maps...")
     index_to_layer, layer_to_index =_get_layer_index_maps(l_info)
@@ -586,7 +585,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     params = _get_params(model, l_info, layer_to_index)
     anacomp_data['params'] = params
 
-    chunk_size = 20000
+    chunk_size = 400000
     num_chunks = int(len(params)/chunk_size)
 
     logger.info("Generate chunks...")
