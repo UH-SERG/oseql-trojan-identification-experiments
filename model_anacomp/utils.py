@@ -12,6 +12,12 @@ import numpy as np
 import random 
 import DD
 import copy
+from pympler import asizeof
+import os
+#import concurrent.futures
+#import multiprocessing
+#from functools import partial
+import shutil
 
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
@@ -23,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 anacomp_data={}
 org_score = 0
+ddmin_model_id=0
 
 ##################################################
 
@@ -244,6 +251,26 @@ def _get_weights(model):
                 opfile.write(str(float(tnsr.item()))+"\n")
             opfile.close()
 
+def _get_num_nonzero_params(model):
+    total_params = 0
+    total_num_zero_params = 0
+    sd = model.state_dict()
+    info = []
+    info.append("layer,total_params,total_zero_params")
+
+    for layer in sd.keys():
+        num_params = sd[layer].numel()  # Total number of parameters in the tensor
+        num_nonzero_params = torch.nonzero(sd[layer]).shape[0]  # Number of non-zero parameters in the tensor
+        num_zero_params = num_params - num_nonzero_params  
+        total_params+=num_params
+        total_num_zero_params+=num_zero_params
+        info.append(layer + ',' + str(num_params) + ',' + str(num_zero_params))
+
+    info.append("-------------------------------------------------------------")
+    info.append("Total Num of Params:" + str(total_params))
+    info.append("Total Num of Params with zero value:"+str(total_num_zero_params))
+    return info, total_num_zero_params
+
 
 def _get_num_params(model):
     """
@@ -309,6 +336,26 @@ def _get_layer_index_maps(l_info):
     layer_to_index = {layer : index for index,layer in enumerate(layers)}
     return index_to_layer, layer_to_index
 
+def _process_row(row_idx, layer_to_index, layer):
+    '''
+    Helper of _get_params
+    '''
+    param_data = {}
+    param_data['layer_id'] = layer_to_index[layer]
+    param_data['row_idx'] = row_idx
+    param_data['col_idx'] = None
+    return param_data
+
+def _process_col(col_idx, row_idx, layer_to_index, layer):
+    '''
+    Helper of _get_params
+    '''
+    param_data = {}
+    param_data['layer_id'] = layer_to_index[layer]
+    param_data['row_idx'] = row_idx
+    param_data['col_idx'] = col_idx
+    return param_data
+
 def _get_params(model, l_info, layer_to_index):
 
     logger.info("Generating list of all params...")
@@ -321,7 +368,21 @@ def _get_params(model, l_info, layer_to_index):
       if l_info[layer]['num_dims'] == 1:
 
         num_rows = l_info[layer]['len_dim1']
-  
+
+        '''
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+           future_to_row_idx = {executor.submit(process_row, row_idx, layer_to_index, layer): row_idx for row_idx in range(num_rows)}
+           for future in tqdm(concurrent.futures.as_completed(future_to_row_idx), total=num_rows, desc="Scanning params of a 1D tensor..."):
+                        params.append(future.result())
+        '''
+
+        '''
+        process_row_partial = partial(_process_row, row_idx=row_idx, layer_to_index=layer_to_index, layer=layer)
+        
+        with multiprocessing.Pool(processes=4) as pool:
+            results = list(tqdm(pool.imap(process_row_partial, range(num_rows)), total=num_rows, desc="Scanning params of a 1D tensor...", leave=False))
+        '''
+                      
         # Loop over the rows of the tensor
         for row_idx in tqdm(range(num_rows), leave=False, desc="Scanning params of a 1D tensor..."):
           param_data = {}
@@ -337,6 +398,27 @@ def _get_params(model, l_info, layer_to_index):
   
         # Loop over the rows of the tensor
         for row_idx in tqdm(range(num_rows), leave=False, desc="Scanning rows of a 2D tensor..."):
+
+          '''
+          # This loop doesn't really go that fast
+
+          with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_to_col_idx = {executor.submit(process_col, col_idx, row_idx, layer_to_index, layer): col_idx for col_idx in range(num_cols)}
+            for future in tqdm(concurrent.futures.as_completed(future_to_col_idx), total=num_cols, desc="Scanning params of a 2D tensor..."):
+              params.append(future.result())
+          '''
+
+          '''
+          # This is even slower than the plain loop implementation!
+          process_col_partial = partial(_process_col, row_idx=row_idx, layer_to_index=layer_to_index, layer=layer)
+        
+          with multiprocessing.Pool(processes=4) as pool:
+            results = list(tqdm(pool.imap(process_col_partial, range(num_cols)), total=num_cols, desc="Scanning params of a 2D tensor...", leave=False))
+
+          '''
+
+          # The plain loop implementation
+
           # Loop over the columns of the tensor
           for col_idx in tqdm(range(num_cols), leave=False,desc="Scanning params of a 2D tensor..."):
               param_data = {}
@@ -347,12 +429,24 @@ def _get_params(model, l_info, layer_to_index):
 
     return params
 
-def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
+def _copy_chunk_param(sd_test, sd_org, layer_name, row_idx, col_idx=None):
+    """
+    Sets the value of a param in sd to that in org_sd. 
+    Changes the state dictionary of a model.
+    """
+    if col_idx == None:
+      sd_test[layer_name][row_idx] = sd_org[layer_name][row_idx]
+
+    else:
+      sd_test[layer_name][row_idx,col_idx] = sd_org[layer_name][row_idx,col_idx]
+    return sd_test
+
+def _zero_out_param(sd_test, layer_name, row_idx, col_idx=None):
     """
     Sets the value of a param to 0. Changes the state dictionary of a model.
     """
     if col_idx == None:
-      sd[layer_name][row_idx] = 0
+      sd_test[layer_name][row_idx] = 0
       '''
       # Test code
 
@@ -360,8 +454,21 @@ def _zero_out_param(sd, layer_name, row_idx, col_idx=None):
           print('In zero out!',layer_name, sd[layer_name][row_idx], row_idx)
       '''
     else:
+      #print(sd[layer_name][row_idx,col_idx])
       sd[layer_name][row_idx,col_idx] = 0
+      #print(sd[layer_name][row_idx,col_idx])
     return sd
+
+def _zero_out_all_attn_layers(sd):
+    for layer in sd:
+      if 'attention' in layer:
+        zeros = torch.zeros_like(sd[layer])
+        sd[layer]=zeros
+
+def _zero_out_all_layers(sd):
+    for layer in sd:
+      zeros = torch.zeros_like(sd[layer])
+      sd[layer]=zeros
 
 def _zero_out_tensor_params(sd, layer_name, row_no, start, end):
     # NOTE: not part of minimization algorithm. Just use it
@@ -466,8 +573,8 @@ class MyDD(DD.DD):
     def _test(self, deltas):
         # FIXME: Set up a test function that takes a set of deltas and
         # returns either self.PASS, self.FAIL, or self.UNRESOLVED.
+        global anacomp_data
         sd              = anacomp_data['model'].state_dict()
-        sd_test         = copy.deepcopy(sd)
         model_test      = anacomp_data['model_test']
         callback_test   = anacomp_data['ddmin_test_fn']
         args            = anacomp_data['args']
@@ -477,6 +584,15 @@ class MyDD(DD.DD):
         chunks          = anacomp_data['chunks']
         params          = anacomp_data['params']
         index_to_layer  = anacomp_data['index_to_layer']
+        """
+
+        '''
+        APPROACH 1:
+           Zero out all the non-delta chunks in the copy of the
+           original map
+        '''
+
+        sd_test         = copy.deepcopy(sd)
 
         # Get chunks to zero_out
 
@@ -512,28 +628,100 @@ class MyDD(DD.DD):
                   print("---------------------------------")
                 '''
           
-        # Compare the values of each key
-        '''
-        for key in sd_test.keys():
-            if not torch.equal(sd_test[key], sd[key]):
-                 print("The state_dicts are different.")
-            else:
-                 print("The state_dicts are the same.")
-        '''
-        model_test.load_state_dict(sd_test) 
+        """
 
-        score = callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
+        '''
+        APPROACH 2:
+           Copy vals of delta chunks from original map to a copy of the zero map
+        '''
+
+        sd_test = copy.deepcopy(anacomp_data['zero_sd'])
+
+        for chunk_id in tqdm(deltas, leave=False, 
+                             desc="Scanning chunks to keep..."):
+
+            for param_id in tqdm(range(chunks[chunk_id]['start'],
+                                 chunks[chunk_id]['end']+1), 
+                                 leave=False, 
+                                 desc="Saving params in chunk..."):
+
+                layer_name = index_to_layer[params[param_id]['layer_id']]
+                row_idx = params[param_id]['row_idx']
+                col_idx = params[param_id]['col_idx']
+                '''
+                if col_idx == None:
+                  print("---------------------------------")
+                  print(layer_name,row_idx,col_idx)
+                  print(sd_test[layer_name][row_idx][col_idx])
+                  print(sd[layer_name][row_idx][col_idx])
+                '''
+                sd_test = _copy_chunk_param(sd_test, sd, layer_name, row_idx, col_idx)
+                '''
+                if col_idx == None:
+                  print(sd_test[layer_name][row_idx][col_idx])
+                  print(sd[layer_name][row_idx][col_idx])
+                  print("---------------------------------")
+                '''
+
+        cache_path = '/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta_all_lr2_bs16_src512_trg3_pat2_e50/cache_data'
+        if os.path.exists(cache_path):
+          shutil.rmtree(cache_path)
+        model_test.load_state_dict(sd_test) 
+        result = callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
+        score = result['eval_acc']
+        # Compare the values of each key
+        # for key in sd_test.keys():
+        #    print(torch.eq(sd_test[key],sd[key]))
 
         
+        global ddmin_model_id
+        ddmin_model_id+=1
+        output_dir = anacomp_data['args'].output_dir
+        info, total_num_zero_params = _get_num_nonzero_params(model_test)
+
         max_score_change = 5*org_score/100 
-        if (score >= org_score - max_score_change and 
-           score <= org_score + max_score_change) :
+
+        fa = open(os.path.join(output_dir, 'ddmin_result.log'), 'a+')
+
+        if fa.tell() == 0:
+          # Write header line
+          fa.write("ddmin_model_id,test_acc,test_loss,satisfied?(Y/N),num_zero_params\n")
+
+        if (score >= org_score - max_score_change) : #and 
+            # score <= org_score + max_score_change) : (Upper bound)
+            logger.info("DDMin generated model satisfied criteria.")
+
+            output_model_file = os.path.join(output_dir, "pytorch_model.bin.ddmin."+str(ddmin_model_id))
+            torch.save(model_test.state_dict(), output_model_file)
+            logger.info("Save model #"+str(ddmin_model_id)+" from ddmin")
+
+            output_model_info_file = os.path.join(output_dir, "pytorch_model_info.ddmin.sat."+str(ddmin_model_id))
+            with open(output_model_info_file, "w") as model_info_file: 
+              for item in info:
+                model_info_file.write(item+"\n")
+              model_info_file.close()
+
+            fa.write("%d,%.8f,%.8f,%s,%d\n" % (ddmin_model_id, result['eval_acc'], result['eval_loss'], "Y", total_num_zero_params))
+              
             return self.FAIL
+
         else:
+            logger.info("DDMin generated model did not satisfy.")
+
+            output_model_info_file = os.path.join(output_dir, "pytorch_model_info.ddmin.unsat."+str(ddmin_model_id))
+            with open(output_model_info_file, "w") as model_info_file: 
+              for item in info:
+                model_info_file.write(item+"\n")
+              model_info_file.close()
+
+            fa.write("%d,%.8f,%.8f,%s,%d\n" % (ddmin_model_id, result['eval_acc'], result['eval_loss'], "N", total_num_zero_params))
+
             return self.PASS
+
         return self.UNRESOLVED
 
 def ddmin():
+    global anacomp_data
     deltas = anacomp_data['chunk_ids']
     # FIXME: Insert your deltas here
 
@@ -557,6 +745,8 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     taking the help of the other functions in this file.
     """
     global org_score
+    global anacomp_data
+    #_get_num_nonzero_params(model)
 
     anacomp_data['model']=model
     anacomp_data['model_test']=copy.deepcopy(model)
@@ -565,14 +755,23 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     anacomp_data['eval_examples']=eval_examples
     anacomp_data['eval_data']=eval_data
 
+    # Create a state dictionary with all params zero
+    anacomp_data['zero_sd']=copy.deepcopy(model.state_dict())
+    _zero_out_all_attn_layers(anacomp_data['zero_sd'])
+
     l_info = _get_layers_info(model)
+    '''
+    for layer in l_info.keys():
+        print(layer)
+    sys.exit(1)
+    '''
 
     logger.info("Evaluating the original model...")
-    org_score = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
+    org_score = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)['eval_acc']
 
-    # Test code
     '''
-    selected_keys = list(l_info.keys())[5:200]
+    # Test code
+    selected_keys = list(l_info.keys())[0:150]
     for key in selected_keys:
         del l_info[key]
     '''
@@ -585,7 +784,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     params = _get_params(model, l_info, layer_to_index)
     anacomp_data['params'] = params
 
-    chunk_size = 400000
+    chunk_size = 100000
     num_chunks = int(len(params)/chunk_size)
 
     logger.info("Generate chunks...")
