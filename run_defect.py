@@ -42,7 +42,7 @@ from models import DefectModel
 from configs import add_args, set_seed
 from utils import get_filenames, get_elapse_time, load_and_cache_defect_data
 from models import get_model_size
-from model_anacomp.utils import anacomp_run 
+from model_anacomp.utils import anacomp_run
 import sys
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
@@ -76,26 +76,45 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
         inputs = batch[0].to(args.device)
         label = batch[1].to(args.device)
         with torch.no_grad():
+            #print("******************call model(inputs,label)***************************************")
             lm_loss, logit = model(inputs, label)
+            #print("******************return from call to  model(inputs,label)***********************")
             eval_loss += lm_loss.mean().item()
             logits.append(logit.cpu().numpy())
+            #print((logit.shape),'the shape of the logit') 
+            #print(inputs,'the inputs')
+            #print((logit), 'the logit')
+            #print(label,'the label')
+            #print((logit.cpu().numpy()), 'the logit.cpu.numpy')
+            #print(type(model))
+            #sys.exit(1)
             labels.append(label.cpu().numpy())
+            '''
+            # Test Code:
+              What is logit?
+              What is logit.cpu().numpy()?
+              What is label?
+              What is inputs?
+              What is batch[1], batch[0], batch?
+            '''
         nb_eval_steps += 1
     logits = np.concatenate(logits, 0)
     labels = np.concatenate(labels, 0)
+    #print(logits)
     preds = logits[:, 1] > 0.5
     eval_acc = np.mean(labels == preds)
+    print(logits[:, 1], 'exact probability scores')
     eval_loss = eval_loss / nb_eval_steps
     perplexity = torch.tensor(eval_loss)
 
     result = {
         "eval_loss": float(perplexity),
-        "eval_acc": round(eval_acc, 4),
+        "eval_acc": round(eval_acc, 8),
     }
 
     logger.info("***** Eval results *****")
     for key in sorted(result.keys()):
-        logger.info("  %s = %s", key, str(round(result[key], 4)))
+        logger.info("  %s = %s", key, str(round(result[key], 8)))
 
     if write_to_pred:
         with open(os.path.join(args.output_dir, "predictions.txt"), 'w') as f:
@@ -117,7 +136,6 @@ def ddmin_test(args, model, eval_examples, eval_data):
         The accuracy of the model.
     """
 
-    fa = open(os.path.join(args.output_dir, 'ddmin_result.log'), 'a+')
     logger.info("  " + "***** Testing with DDmin *****")
     logger.info("  Batch size = %d", args.eval_batch_size)
 
@@ -126,16 +144,8 @@ def ddmin_test(args, model, eval_examples, eval_data):
         model = torch.nn.DataParallel(model)
 
     result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
-    logger.info("  test_acc=%.4f", result['eval_acc'])
-    logger.info("  " + "*" * 20)
 
-    fa.write("test-acc: %.4f\n" % result['eval_acc'])
-    if args.res_fn:
-        with open(args.res_fn, 'a+') as f:
-            #f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
-            f.write("acc: %.4f\n\n" % result['eval_acc'])
-
-    return result['eval_acc']
+    return result
 
 def main():
     parser = argparse.ArgumentParser()
@@ -152,7 +162,6 @@ def main():
         device = torch.device("cuda", args.local_rank)
         torch.distributed.init_process_group(backend='nccl')
         args.n_gpu = 1
-
 
     logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, cpu count: %d",
                    args.local_rank, device, args.n_gpu, bool(args.local_rank != -1), cpu_cont)
@@ -181,8 +190,12 @@ def main():
     if args.anacomp == 1:
        logger.info("***** Running Anacomp Only *****")
 
-       eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test',
-                                                          False)
+       #####SELECT CUSTOM MODEL#####
+       model.load_state_dict(torch.load("/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/clean/roberta_all_lr2_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"))
+       #############################
+
+       eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
+       
        anacomp_run(model, ddmin_test_fn=ddmin_test, args=args,
                    eval_examples=eval_examples, eval_data=eval_data)
        sys.exit(1)
