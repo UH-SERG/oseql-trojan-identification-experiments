@@ -12,12 +12,17 @@ import numpy as np
 import random 
 import DD
 import copy
-from pympler import asizeof
 import os
 #import concurrent.futures
 #import multiprocessing
 #from functools import partial
 import shutil
+import torch
+import torch.nn as nn
+import torch.nn.utils.prune as prune
+from .utils_model_update import copy_chunk_param, zero_out_all_attn_layers, zero_out_param
+from .utils_model_info import get_layers_info
+from .utils_model_stats import get_num_zero_params, get_num_zero_attn_params, get_num_params
 
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
@@ -33,300 +38,6 @@ ddmin_model_id=0
 
 ##################################################
 
-def get_children(module, opfile, space_size):
-    # DEPRECATED
-    # This function is no longer in use and should not be called.
-
-    global MODULE_ID
-    space_size+=1
-    children = [child for child in module.children()]
-    if len(children)==0:
-        space_size-=1
-        return
-    MODULE_ID+=1
-    LEVEL = str(space_size-1)
-    opfile.write("------------------------------------------\n")
-    opfile.write("    "*space_size+"LEVEL:"+LEVEL+" MODULE_ID:"+str(MODULE_ID)+" CHILD:\n")
-    opfile.write("    "*space_size+"Child type: "+ str(type(module)) + "\n")
-
-    for name, params in tqdm(module.named_parameters()):
-      opfile.write(str(name)+"\n")
-      with open("module."+str(MODULE_ID)+"."+str(name), "w") as mod_params: 
-        for param in tqdm(params):
-               if param.dim()!=0:
-                for val in param:
-                   mod_params.write(str(float(val))+"\n")
-                   #vals.append(float(val))
-               else:
-                   mod_params.write(str(float(val))+"\n")
-                   #vals.append(float(param.item()))
-        mod_params.close()
-    for child in children:
-      get_children(child, opfile, space_size)
-
-def _get_chunk_data(layer, row_id, i, j):
-    # DEPRECATED
-    # See description of _get_chunk_map()
-    """
-    _get_chunk_map() helper 
-    """
-    chunk = {}
-    chunk['start'] = i
-    chunk['end']   = j
-    chunk['layer'] = layer
-    chunk['row']   = row_id
-    chunk['size'] = j - i + 1
-    return chunk
-
-def _get_chunks(layer, row_id, i, j, max_row_id, num_chunks):
-    # DEPRECATED
-    # See description of _get_chunk_map()
-    """
-    _get_chunk_map() helper 
-    """
-    chunks = []
-  
-    if num_chunks == 1:
-      chunk = _get_chunk_data(layer, row_id, i, j)
-      assert (chunk['row'] <= max_row_id)
-      assert (chunk['start'] != chunk['end'])
-      chunks.append(chunk)
-      return chunks
-  
-    arr = np.array_split(range(i,j), num_chunks)
-    for item in arr:
-      chunk = _get_chunk_data(layer, row_id, i=item[0], j=item[item.size-1])
-      assert (chunk['end'] <= j)
-      assert (chunk['row'] <= max_row_id)
-      assert (chunk['start'] != chunk['end']) # We don't want singleton chunks
-      chunks.append(chunk)
-    return chunks
-
-def _get_num_chunks(row_size, chunk_size):
-    # DEPRECATED
-    # See description of _get_chunk_map()
-    """
-    _get_chunk_map() helper 
-    """
-    if row_size > chunk_size:
-        num_chunks = int(row_size/chunk_size)
-    else:
-        num_chunks = 1
-    return num_chunks
-
-def _get_chunk_map(l_info, chunk_size):
-    # DEPRECATED
-    # This method assumes the larger dimension to be the column. However, to
-    # make changes to the model, we need to know **exactly** where the param is
-    # located. When we are oblivious to whether a dim is the col or row, i.e.,
-    # the 2nd or the 1st dim, we lose location information. Hence this approach
-    # should not be used.
-    """
-    Generates the chunk map.
-    """
-
-    one_d_layer_chunks = []
-    two_d_layer_chunks = []
-
-    logger.info("(Generating Chunk Map) Processing layers...")
-    for layer in tqdm(l_info.keys()):
-
-        assert (l_info[layer]['num_dims'] <= 2)
-
-        if l_info[layer]['num_dims']==1:
-
-            # Use col_id to represent larger axis
-            if l_info[layer]['len_dim1'] >= l_info[layer]['len_dim2']:
-                num_cols = l_info[layer]['len_dim1'] # (also the size of a row)
-                num_rows = 1 
-            else:
-                num_cols = l_info[layer]['len_dim2'] # (also the size of a row)
-                num_rows = 1 
-
-            # Process row to get chunks 
-            i = 0
-            j = num_cols - 1
-            row_id = 0
-
-            # Calculate num_chunks
-            num_chunks = _get_num_chunks(num_cols, chunk_size)
-
-            one_d_layer_chunks = _get_chunks(layer, row_id, i, j, max_row_id=0, num_chunks=num_chunks)
-
-        elif l_info[layer]['num_dims']==2:
-
-            # Use col_id to represent larger axis
-            if l_info[layer]['len_dim1'] >= l_info[layer]['len_dim2']:
-                num_cols = l_info[layer]['len_dim1']
-                num_rows = l_info[layer]['len_dim2']
-            else:
-                num_cols = l_info[layer]['len_dim2']
-                num_rows = l_info[layer]['len_dim1']
-                
-            # Process rows to get chunks 
-            i = 0
-            j = num_cols - 1
-
-            # Calculate num_chunks
-            num_chunks = _get_num_chunks(num_cols, chunk_size)
-
-            for row_id in range(0, num_rows):
-              two_d_layer_chunks += _get_chunks(layer, row_id, i, j, max_row_id=num_rows-1, num_chunks = num_chunks)
-
-    all_chunks = one_d_layer_chunks + two_d_layer_chunks
-    chunk_map = {index: value for index, value in enumerate(all_chunks)}
-    return chunk_map
-
-def _get_detailed_arch(model):
-    """
-    Outputs arch_components.txt, a file showing the architecture of the model, 
-    with global layer ids assigned to each component.
-    """
-
-    with open("arch_components.txt", "w") as file3:
-        global_layer = 0
-        file3.write("Main Model: " + str(type(model).__name__)+"\n")
-        for child in model.children():
-            file3.write("-------------------------------------------------------------------\n")
-            child_name = str(type(child).__name__)
-            file3.write("Component hierarchy of "+child_name+"\n")
-            file3.write("-------------------------------------------------------------------\n")
-            file3.write(str(child)+"\n")
-            file3.write("-------------------------------------------------------------------\n")
-            file3.write("Component list of "+child_name+"\n")
-            file3.write("-------------------------------------------------------------------\n")
-            prev_layer_num=-1
-            for component, params in child.named_parameters():
-                if "layer" in component:
-                    component_name_parts = component.split(".")
-                    if "layers" in component:
-                       layer_num_idx = component_name_parts.index("layers")+1
-                    else:
-                       layer_num_idx = component_name_parts.index("layer")+1
-
-                    layer_num = str(component_name_parts[layer_num_idx])
-                    if layer_num!=prev_layer_num:
-                        global_layer+=1
-                        prev_layer_num=layer_num
-                    file3.write("gl."+str(global_layer)+"."+child_name+"."+str(component)+"\n")
-                else:
-                    file3.write("gl_not_real_layer."+str(global_layer)+"."+child_name+"."+str(component)+"\n")
-
-def _get_weights(model):
-    """
-    Generates .csv files consisting of weights for each layer in the model.
-    
-    Output filename Description: 
-      `(gl.X)` indicates the global layer number. The rest is the 
-      description of the component. Example File names:
-      - gl.9.RobertaModel.encoder.layer.8.attention.self.value.weight.csv 
-      - gl.9.RobertaModel.encoder.layer.8.attention.self.key.bias.csv
-    """
-
-    global_layer = 0
-    for child in model.children():
-        child_name = str(type(child).__name__)
-        prev_layer_num=-1
-        for component, params in tqdm(child.named_parameters()):
-            if "layer" in component:
-                component_name_parts = component.split(".")
-                if "layers" in component:
-                   layer_num_idx = component_name_parts.index("layers")+1
-                else:
-                   layer_num_idx = component_name_parts.index("layer")+1
-
-                layer_num = str(component_name_parts[layer_num_idx])
-                if layer_num!=prev_layer_num:
-                    global_layer+=1
-                    prev_layer_num=layer_num
-                opfile = open("gl."+str(global_layer)+"."+child_name+"."+str(component)+".csv","w")
-                
-            else:
-                opfile = open("gl_not_real_layer."+str(global_layer)+"."+child_name+"."+str(component)+".csv","w")
-            for tnsr in tqdm(params):
-              if tnsr.dim()!=0:
-                for val in tnsr:
-                    opfile.write(str(float(val))+"\n")
-              else:
-                opfile.write(str(float(tnsr.item()))+"\n")
-            opfile.close()
-
-def _get_num_nonzero_params(model):
-    total_params = 0
-    total_num_zero_params = 0
-    sd = model.state_dict()
-    info = []
-    info.append("layer,total_params,total_zero_params")
-
-    for layer in sd.keys():
-        num_params = sd[layer].numel()  # Total number of parameters in the tensor
-        num_nonzero_params = torch.nonzero(sd[layer]).shape[0]  # Number of non-zero parameters in the tensor
-        num_zero_params = num_params - num_nonzero_params  
-        total_params+=num_params
-        total_num_zero_params+=num_zero_params
-        info.append(layer + ',' + str(num_params) + ',' + str(num_zero_params))
-
-    info.append("-------------------------------------------------------------")
-    info.append("Total Num of Params:" + str(total_params))
-    info.append("Total Num of Params with zero value:"+str(total_num_zero_params))
-    return info, total_num_zero_params
-
-
-def _get_num_params(model):
-    """
-    Returns the total no. of params in a model.
-    """
-    sd = model.state_dict()
-    num_params = 0
-    for pair in sd.items():
-          layer_params = pair[1]
-          dim = len(layer_params.shape)
-          assert(dim<=2)
-          if dim == 1:
-            size = layer_params.shape[0]
-            num_params+=size
-          if dim == 2:
-            size1 = layer_params.shape[0]
-            size2 = layer_params.shape[1]
-            num_params+=size1*size2
-    return num_params
-
-def _get_layers_info(model):
-    """
-    Returns a dictionary with info on each layer of the model.
-    """
-
-    sd = model.state_dict()
-
-    layers_info = {}
-
-    num_params = 0
-    for pair in sd.items():
-          layer_data = { 'num_params' : 0,
-                         'num_dims' : 0,
-                         'len_dim1' : 0,
-                         'len_dim2' : 0
-                       }
-          layer_name = pair[0]
-          layer_params = pair[1]
-          dim = len(layer_params.shape)
-          assert(dim<=2)
-          if dim == 1:
-            size = layer_params.shape[0]
-            layer_data['num_dims'] = 1
-            layer_data['len_dim1'] = size
-            layer_data['num_params'] = size
-          if dim == 2:
-            size1 = layer_params.shape[0]
-            size2 = layer_params.shape[1]
-            layer_data['num_dims'] = 2
-            layer_data['len_dim1'] = size1
-            layer_data['len_dim2'] = size2
-            layer_data['num_params'] = size1*size2
-
-          layers_info[layer_name] = layer_data  
-    return layers_info
-
 def _get_layer_index_maps(l_info):
     layers = []
     for layer in l_info.keys():
@@ -338,7 +49,7 @@ def _get_layer_index_maps(l_info):
 
 def _process_row(row_idx, layer_to_index, layer):
     '''
-    Helper of _get_params
+    Helper of _get_params for parellelization
     '''
     param_data = {}
     param_data['layer_id'] = layer_to_index[layer]
@@ -348,7 +59,7 @@ def _process_row(row_idx, layer_to_index, layer):
 
 def _process_col(col_idx, row_idx, layer_to_index, layer):
     '''
-    Helper of _get_params
+    Helper of _get_params for parallelization
     '''
     param_data = {}
     param_data['layer_id'] = layer_to_index[layer]
@@ -368,6 +79,8 @@ def _get_params(model, l_info, layer_to_index):
       if l_info[layer]['num_dims'] == 1:
 
         num_rows = l_info[layer]['len_dim1']
+        
+        # Parallelization Attempts
 
         '''
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -382,6 +95,8 @@ def _get_params(model, l_info, layer_to_index):
         with multiprocessing.Pool(processes=4) as pool:
             results = list(tqdm(pool.imap(process_row_partial, range(num_rows)), total=num_rows, desc="Scanning params of a 1D tensor...", leave=False))
         '''
+
+        # The plain loop implementation
                       
         # Loop over the rows of the tensor
         for row_idx in tqdm(range(num_rows), leave=False, desc="Scanning params of a 1D tensor..."):
@@ -399,6 +114,9 @@ def _get_params(model, l_info, layer_to_index):
         # Loop over the rows of the tensor
         for row_idx in tqdm(range(num_rows), leave=False, desc="Scanning rows of a 2D tensor..."):
 
+
+          # Parallelization Attempts
+
           '''
           # This loop doesn't really go that fast
 
@@ -414,7 +132,6 @@ def _get_params(model, l_info, layer_to_index):
         
           with multiprocessing.Pool(processes=4) as pool:
             results = list(tqdm(pool.imap(process_col_partial, range(num_cols)), total=num_cols, desc="Scanning params of a 2D tensor...", leave=False))
-
           '''
 
           # The plain loop implementation
@@ -428,132 +145,6 @@ def _get_params(model, l_info, layer_to_index):
               params.append(param_data)
 
     return params
-
-def _copy_chunk_param(sd_test, sd_org, layer_name, row_idx, col_idx=None):
-    """
-    Sets the value of a param in sd to that in org_sd. 
-    Changes the state dictionary of a model.
-    """
-    if col_idx == None:
-      sd_test[layer_name][row_idx] = sd_org[layer_name][row_idx]
-
-    else:
-      sd_test[layer_name][row_idx,col_idx] = sd_org[layer_name][row_idx,col_idx]
-    return sd_test
-
-def _zero_out_param(sd_test, layer_name, row_idx, col_idx=None):
-    """
-    Sets the value of a param to 0. Changes the state dictionary of a model.
-    """
-    if col_idx == None:
-      sd_test[layer_name][row_idx] = 0
-      '''
-      # Test code
-
-      if layer_name == 'encoder.encoder.layer.11.output.dense.bias' and row_idx == 746:
-          print('In zero out!',layer_name, sd[layer_name][row_idx], row_idx)
-      '''
-    else:
-      #print(sd[layer_name][row_idx,col_idx])
-      sd[layer_name][row_idx,col_idx] = 0
-      #print(sd[layer_name][row_idx,col_idx])
-    return sd
-
-def _zero_out_all_attn_layers(sd):
-    for layer in sd:
-      if 'attention' in layer:
-        zeros = torch.zeros_like(sd[layer])
-        sd[layer]=zeros
-
-def _zero_out_all_layers(sd):
-    for layer in sd:
-      zeros = torch.zeros_like(sd[layer])
-      sd[layer]=zeros
-
-def _zero_out_tensor_params(sd, layer_name, row_no, start, end):
-    # NOTE: not part of minimization algorithm. Just use it
-    # independently for testing purposes.
-    """
-    Sets a subset of a tensor to zero, starting from element at index 'start'
-    to that at index 'end'.
-
-    Args:
-        sd (dictionary): The state dictionary of the model. 
-        layer_name (string): The name of the layer.
-        row_no (int): The row you want to change.
-        start (int): The index of the first element you want to change. 
-        end (int): The index of the last element you want to change. 
-
-    Returns:
-        The state dictionary with modified weights.
-    """
-
-    tensor = sd[layer_name] 
-    sub_tensor = None
-
-    '''
-    # Test code
-
-    print("Look here", two_d_matrix[0,0])
-    start = 3
-    end = 7
-    row_no = 1
-    two_d_matrix = torch.tensor([[1,15,3,48,1,5,2,1,2,10],[1,2,3,4,5,6,7,8,9,10]])
-    print(two_d_matrix)
-    sys.exit(1)
-    '''
-
-    assert(len(tensor.shape) <= 2)
-
-    if len(tensor.shape) == 2:
-      sub_tensor = tensor[row_no,:]
-    elif len(tensor.shape) == 1:
-      sub_tensor = tensor
-
-    assert(sub_tensor.shape[0]>= start)
-    assert(sub_tensor.shape[0]>= end)
-
-    num_zero_vals = end - start + 1 
-    zeros = torch.zeros(num_zero_vals)
-
-    print('tensor shape',tensor.shape)
-    print('num 0 vals',num_zero_vals)
-    print('zeros shape',zeros.shape)
-    print('subtensor shape',sub_tensor.shape)
-    print('subtensor part shape', sub_tensor[start:end+1].shape)
-    sub_tensor[start:end+1] = zeros
-
-    '''
-    # Test code
-
-    print("Look here", sub_tensor[0])
-    print("Look here", two_d_matrix[0,0])
-    '''
-
-    return sd
-    
-def _zero_out_all_bias_params(model):
-    """
-    Sets all the bias parameters of a model to zero.
-    """
-
-    sd = model.state_dict()
-    for pair in sd.items():
-        layer_name = pair[0]
-        layer_params = pair[1]
-        if "bias" in layer_name:
-          dim = len(layer_params.shape)
-          assert(dim<=2)
-          if dim == 1:
-            size = layer_params.shape[0]
-            sd[layer_name] = torch.zeros(size) 
-          if dim == 2:
-            size1 = layer_params.shape[0]
-            size2 = layer_params.shape[1]
-            sd[layer_name] = torch.zeros(size1,size2) 
-    model.load_state_dict(sd) 
-    logger.info("You have set all biases of the model to 0!")
-    return model
 
 def _get_param_chunks(params, chunk_size):
     i=0
@@ -620,7 +211,7 @@ class MyDD(DD.DD):
                   print(sd_test[layer_name][row_idx][col_idx])
                   print(sd[layer_name][row_idx][col_idx])
                 '''
-                sd_test = _zero_out_param(sd_test, layer_name, row_idx, col_idx)
+                sd_test = zero_out_param(sd_test, layer_name, row_idx, col_idx)
                 '''
                 if col_idx == None:
                   print(sd_test[layer_name][row_idx][col_idx])
@@ -655,7 +246,7 @@ class MyDD(DD.DD):
                   print(sd_test[layer_name][row_idx][col_idx])
                   print(sd[layer_name][row_idx][col_idx])
                 '''
-                sd_test = _copy_chunk_param(sd_test, sd, layer_name, row_idx, col_idx)
+                sd_test = copy_chunk_param(sd_test, sd, layer_name, row_idx, col_idx)
                 '''
                 if col_idx == None:
                   print(sd_test[layer_name][row_idx][col_idx])
@@ -663,7 +254,7 @@ class MyDD(DD.DD):
                   print("---------------------------------")
                 '''
 
-        cache_path = '/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta_all_lr2_bs16_src512_trg3_pat2_e50/cache_data'
+        cache_path = '/scratch1/CodeT5-original-gpu0/CodeT5-copy/sh/saved_models/defect/roberta_all_lr2_bs16_src512_trg3_pat2_e50/cache_data'
         if os.path.exists(cache_path):
           shutil.rmtree(cache_path)
         model_test.load_state_dict(sd_test) 
@@ -673,11 +264,10 @@ class MyDD(DD.DD):
         # for key in sd_test.keys():
         #    print(torch.eq(sd_test[key],sd[key]))
 
-        
         global ddmin_model_id
         ddmin_model_id+=1
         output_dir = anacomp_data['args'].output_dir
-        info, total_num_zero_params = _get_num_nonzero_params(model_test)
+        info, total_num_zero_params = get_num_zero_params(model_test)
 
         max_score_change = 5*org_score/100 
 
@@ -685,11 +275,19 @@ class MyDD(DD.DD):
 
         if fa.tell() == 0:
           # Write header line
-          fa.write("ddmin_model_id,test_acc,test_loss,satisfied?(Y/N),num_zero_params\n")
+          fa.write("ddmin_model_id,test_acc,test_loss,satisfied?(Y/N),num_zero_params,minimized?(Y/N)\n")
+
+        minimized = ''
+        if anacomp_data['total_num_zero_params'] == total_num_zero_params:
+            minimized = 'N'
+        elif anacomp_data['total_num_zero_params'] < total_num_zero_params:
+            minimized = 'Y'
 
         if (score >= org_score - max_score_change) : #and 
             # score <= org_score + max_score_change) : (Upper bound)
-            logger.info("DDMin generated model satisfied criteria.")
+            logger.info("DDMin generated model "+str(ddmin_model_id)+" satisfied criteria.")
+            if anacomp_data['total_num_zero_params'] == total_num_zero_params:
+                logger.info('However, there was no minimization.')
 
             output_model_file = os.path.join(output_dir, "pytorch_model.bin.ddmin."+str(ddmin_model_id))
             torch.save(model_test.state_dict(), output_model_file)
@@ -701,7 +299,7 @@ class MyDD(DD.DD):
                 model_info_file.write(item+"\n")
               model_info_file.close()
 
-            fa.write("%d,%.8f,%.8f,%s,%d\n" % (ddmin_model_id, result['eval_acc'], result['eval_loss'], "Y", total_num_zero_params))
+            fa.write("%d,%.8f,%.8f,%s,%d,%s\n" % (ddmin_model_id, result['eval_acc'], result['eval_loss'], "Y", total_num_zero_params, minimized))
               
             return self.FAIL
 
@@ -714,7 +312,7 @@ class MyDD(DD.DD):
                 model_info_file.write(item+"\n")
               model_info_file.close()
 
-            fa.write("%d,%.8f,%.8f,%s,%d\n" % (ddmin_model_id, result['eval_acc'], result['eval_loss'], "N", total_num_zero_params))
+            fa.write("%d,%.8f,%.8f,%s,%d,%s\n" % (ddmin_model_id, result['eval_acc'], result['eval_loss'], "N", total_num_zero_params, minimized))
 
             return self.PASS
 
@@ -727,16 +325,9 @@ def ddmin():
 
     mydd = MyDD()
 
-    # print("Simplifying failure-inducing input...")
-    # c = mydd.ddmin(deltas)  # Invoke DDMIN
-    # print("The 1-minimal failure-inducing input is", c)
-    # print("Removing any element will make the failure go away.")
-    # print()
-
     print("Isolating the failure-inducing difference...")
     (c, c1, c2) = mydd.dd(deltas)  # Invoke DD
     print("The 1-minimal failure-inducing difference is", c)
-    #print(c1, "passes,", c2, "fails")
 
 def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_data=None):
     """
@@ -744,10 +335,13 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     can implement the logic of the analysis we want to do in this function,
     taking the help of the other functions in this file.
     """
+
+    """
+    ###################################################### DDMIN ################################################### 
     global org_score
     global anacomp_data
-    #_get_num_nonzero_params(model)
 
+    anacomp_data['total_num_zero_params'] = get_num_zero_params(model)[1]
     anacomp_data['model']=model
     anacomp_data['model_test']=copy.deepcopy(model)
     anacomp_data['ddmin_test_fn']=ddmin_test_fn
@@ -755,11 +349,14 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     anacomp_data['eval_examples']=eval_examples
     anacomp_data['eval_data']=eval_data
 
+    # print(get_num_zero_attn_params(model))
+    # sys.exit(1)
+
     # Create a state dictionary with all params zero
     anacomp_data['zero_sd']=copy.deepcopy(model.state_dict())
-    _zero_out_all_attn_layers(anacomp_data['zero_sd'])
+    zero_out_all_attn_layers(anacomp_data['zero_sd'])
 
-    l_info = _get_layers_info(model)
+    l_info = get_layers_info(model)
     '''
     for layer in l_info.keys():
         print(layer)
@@ -784,7 +381,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     params = _get_params(model, l_info, layer_to_index)
     anacomp_data['params'] = params
 
-    chunk_size = 100000
+    chunk_size = 10
     num_chunks = int(len(params)/chunk_size)
 
     logger.info("Generate chunks...")
@@ -796,3 +393,99 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     anacomp_data['chunk_ids'] = chunk_ids
 
     ddmin()
+    ################################################################################################################
+    """
+
+    """
+    # Define the pruning hyperparameters
+    '''
+    pruning_params = {
+      'name': 'weight',
+      'pruning_method': 'magnitude',
+      'sparsity': 0.5,
+      'dim': 0
+    }
+    '''
+
+    pruning_params = {
+     'name': 'weight',
+     'amount': 0.5,
+      'pruning_method': prune.L1Unstructured
+    }
+
+    # Prune the network using the hyperparameters
+    #prune.global_unstructured(parameters=model.parameters(), **pruning_params)
+    '''
+    print(model.parameters())
+    for item in model.parameters():
+        print(type(item))
+    for (module, name) in model.parameters():
+        print(module)
+        print(name)
+        print('--------------------')
+    '''
+    parameters_to_prune = [(name, param) for name, param in model.named_parameters()]
+    for name, param in model.named_parameters():
+        print(type(name))
+
+    #pruning_method = prune.RandomUnstructured
+    prune.global_unstructured(parameters=parameters_to_prune, **pruning_params)
+    #prune.global_unstructured(parameters=parameters_to_prune, pruning_method=pruning_method, **pruning_params)
+
+    #for name, parameter in model.named_parameters():
+    #  if 'weight' in name:
+    #      parameter.requires_grad = True
+    #      prune.l1_unstructured(parameter, **pruning_params)
+    #      parameter.requires_grad = False
+
+    #prune.l1_unstructured(model, **pruning_params)
+    """
+
+    # Prune params with small absolute values 
+
+    sd = model.state_dict()
+    tensors = list(sd.values())
+    flattened_tensors = [tensor.flatten() for tensor in tensors]
+    abs_tensors = [torch.abs(t) for t in flattened_tensors]
+    merged_tensor = torch.cat(abs_tensors)
+    print(torch.median(merged_tensor))
+    print(torch.max(merged_tensor))
+    print(torch.min(merged_tensor))
+    total_num_vals_updated=0
+    total_num_zeros=0
+    for layer in sd.keys():
+        t = sd[layer]
+        flattened = t.flatten()
+        zeros_tensor = torch.sum(t == 0)
+        num_zeros = zeros_tensor.item() # Original no. of zeros in tensor 
+        total_num_zeros+=num_zeros
+        count = (torch.abs(flattened) < 0.001).sum().item()
+        flattened[torch.abs(flattened)<0.001]=0
+        num_vals_updated = count - num_zeros
+        total_num_vals_updated+=num_vals_updated
+        #print("Updated {} values in layer {}.".format(num_vals_updated,layer))
+        pruned = flattened.reshape(t.shape)
+        sd[layer] = pruned
+    print("Updated {} values in model.".format(total_num_vals_updated))
+    print('num_zeros_total', total_num_zeros)
+    model.load_state_dict(sd) 
+    print(get_num_zero_params(model)[1], get_num_zero_attn_params(model)[1], get_num_params(model))
+    #result = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
+    #score = result['eval_acc']
+    #print(result)
+
+def anacomp_compare_models(*models):
+    sd1 = models[0].state_dict()
+    sd2 = models[1].state_dict()
+
+    for layer in sd1:
+        if 'attention' not in layer:
+          assert (torch.equal(sd1[layer],sd2[layer])==True)
+        else:
+            if torch.equal(sd1[layer],sd2[layer])==False:
+             print(layer)
+
+             # Find the unequal values between the tensors
+             unequal = torch.nonzero(sd1[layer] != sd2[layer])
+             print("Unequal values in x: ", sd1[layer][unequal].tolist())
+    
