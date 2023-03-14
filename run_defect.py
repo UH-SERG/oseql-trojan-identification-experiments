@@ -24,6 +24,7 @@ import os
 import logging
 import argparse
 import math
+import copy
 import numpy as np
 from io import open
 from tqdm import tqdm
@@ -42,7 +43,7 @@ from models import DefectModel
 from configs import add_args, set_seed
 from utils import get_filenames, get_elapse_time, load_and_cache_defect_data
 from models import get_model_size
-from model_anacomp.utils import anacomp_run
+from model_anacomp.utils import anacomp_run, anacomp_compare_models
 import sys
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
@@ -191,13 +192,20 @@ def main():
        logger.info("***** Running Anacomp Only *****")
 
        #####SELECT CUSTOM MODEL#####
-       model.load_state_dict(torch.load("/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/clean/roberta_all_lr2_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"))
+       model2 = copy.deepcopy(model)  
+       #model.load_state_dict(torch.load("/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/poisoned_DCI_prate2/roberta_all_lr2_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"))
+       model.load_state_dict(torch.load('/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/clean/roberta_all_lr2_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin'))
+       model2.load_state_dict(torch.load("/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/minimization/ddmin/clean/minimize-attn-layers/chunkify-all-layers/cs-100/roberta_all_lr2_bs16_src512_trg3_pat2_e50/pytorch_model.bin.ddmin.20"))
        #############################
 
-       eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
-       
-       anacomp_run(model, ddmin_test_fn=ddmin_test, args=args,
-                   eval_examples=eval_examples, eval_data=eval_data)
+       # Do analysis on a single model
+       #eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
+       #anacomp_run(model, ddmin_test_fn=ddmin_test, args=args,
+       #           eval_examples=eval_examples, eval_data=eval_data)
+
+       # Compare models
+       anacomp_compare_models(model,model2)
+
        sys.exit(1)
 
     if args.do_train:
