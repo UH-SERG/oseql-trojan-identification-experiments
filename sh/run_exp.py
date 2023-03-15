@@ -93,7 +93,8 @@ def get_args_by_task_model(task, sub_task, model_tag):
     if task == 'concode':
         lr = 10
     elif task == 'defect':
-        lr = 2
+        bs = 16 # Changed HERE!
+        lr = 3 # Changed HERE! Original value 2
     return bs, lr, src_len, trg_len, patience, epoch
 
 
@@ -101,7 +102,7 @@ def run_one_exp(args):
     bs, lr, src_len, trg_len, patience, epoch = get_args_by_task_model(args.task, args.sub_task, args.model_tag)
     print('============================Start Running==========================')
     cmd_str = get_cmd(task=args.task, sub_task=args.sub_task, model_tag=args.model_tag, gpu=args.gpu,
-                      data_num=args.data_num, bs=bs, lr=lr, source_length=src_len, target_length=trg_len,
+                      data_num=args.data_num, bs=args.bs, lr=args.lr, source_length=src_len, target_length=trg_len,
                       patience=patience, epoch=epoch, warmup=1000,
                       model_dir=args.model_dir, summary_dir=args.summary_dir,
                       res_fn='{}/{}_{}.txt'.format(args.res_dir, args.task, args.model_tag), anacomp = args.anacomp)
@@ -154,6 +155,8 @@ if __name__ == '__main__':
     parser.add_argument("--data_num", type=int, default=-1, help='number of data instances to use, -1 for full data')
     parser.add_argument("--gpu", type=int, default=0, help='index of the gpu to use in a cluster')
     parser.add_argument("--anacomp", type=int, default=0, help='perform anacomp functions on model')
+    parser.add_argument("--lr", type=int, default=2, help='learning rate')
+    parser.add_argument("--bs", type=int, default=16, help='batch size')
     args = parser.parse_args()
 
     if not os.path.exists(args.res_dir):
