@@ -167,7 +167,7 @@ class MyDD(DD.DD):
         global anacomp_data
         sd              = anacomp_data['model'].state_dict()
         model_test      = anacomp_data['model_test']
-        callback_test   = anacomp_data['ddmin_test_fn']
+        eval_callback_fn   = anacomp_data['eval_callback_fn']
         args            = anacomp_data['args']
         eval_examples   = anacomp_data['eval_examples']
         eval_data       = anacomp_data['eval_data']
@@ -258,7 +258,7 @@ class MyDD(DD.DD):
         if os.path.exists(cache_path):
           shutil.rmtree(cache_path)
         model_test.load_state_dict(sd_test) 
-        result = callback_test(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
+        result = eval_callback_fn(args=args, model=model_test, eval_examples=eval_examples, eval_data=eval_data)
         score = result['eval_acc']
         # Compare the values of each key
         # for key in sd_test.keys():
@@ -329,7 +329,7 @@ def ddmin():
     (c, c1, c2) = mydd.dd(deltas)  # Invoke DD
     print("The 1-minimal failure-inducing difference is", c)
 
-def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_data=None):
+def anacomp_run(model, eval_callback_fn=None, args=None, eval_examples=None, eval_data=None):
     """
     This is the only API we need to call from outside the anacomp module. We
     can implement the logic of the analysis we want to do in this function,
@@ -344,7 +344,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     anacomp_data['total_num_zero_params'] = get_num_zero_params(model)[1]
     anacomp_data['model']=model
     anacomp_data['model_test']=copy.deepcopy(model)
-    anacomp_data['ddmin_test_fn']=ddmin_test_fn
+    anacomp_data['eval_callback_fn']=eval_callback_fn
     anacomp_data['args']=args 
     anacomp_data['eval_examples']=eval_examples
     anacomp_data['eval_data']=eval_data
@@ -364,7 +364,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     '''
 
     logger.info("Evaluating the original model...")
-    org_score = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)['eval_acc']
+    org_score = eval_callback_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)['eval_acc']
 
     '''
     # Test code
@@ -470,7 +470,7 @@ def anacomp_run(model, ddmin_test_fn=None, args=None, eval_examples=None, eval_d
     print('num_zeros_total', total_num_zeros)
     model.load_state_dict(sd) 
     print(get_num_zero_params(model)[1], get_num_zero_attn_params(model)[1], get_num_params(model))
-    #result = ddmin_test_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
+    #result = eval_callback_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
     #score = result['eval_acc']
     #print(result)
 

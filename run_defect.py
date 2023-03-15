@@ -127,7 +127,7 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
 
     return result
 
-def ddmin_test(args, model, eval_examples, eval_data):
+def evaluate_callback(args, model, eval_examples, eval_data):
     """
     This is a call back function, to be called from the anacomp library.
     We have defined it here since the implementation of 'evaluate' is 
@@ -137,7 +137,7 @@ def ddmin_test(args, model, eval_examples, eval_data):
         The accuracy of the model.
     """
 
-    logger.info("  " + "***** Testing with DDmin *****")
+    logger.info("  " + "***** Eval callback *****")
     logger.info("  Batch size = %d", args.eval_batch_size)
 
     if args.n_gpu > 1:
@@ -200,7 +200,7 @@ def main():
 
        # Do analysis on a single model
        #eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
-       #anacomp_run(model, ddmin_test_fn=ddmin_test, args=args,
+       #anacomp_run(model, eval_callback_fn=evaluate_callback, args=args,
        #           eval_examples=eval_examples, eval_data=eval_data)
 
        # Compare models
