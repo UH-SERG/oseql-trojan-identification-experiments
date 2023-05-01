@@ -72,17 +72,23 @@ elif [[ $MODEL_TAG == codet5_large ]]; then
 fi
 
 
+echo "Model Type! "${MODEL_TYPE}
+
 if [[ ${TASK} == 'multi_task' ]]; then
   RUN_FN=${WORKDIR}/run_multi_gen.py
   MULTI_TASK_AUG='--max_steps '${16}' --save_steps '${17}' --log_steps '${18}
 elif [[ ${TASK} == 'clone' ]]; then
   RUN_FN=${WORKDIR}/run_clone.py
-elif [[ ${TASK} == 'defect' ]] && [[ ${MODEL_TYPE} == 'roberta' ||  ${MODEL_TYPE} == 'bart' ]]; then
+elif [[ ${TASK} == 'defect' ]] && [[ ${MODEL_TYPE} == 'roberta' ||  ${MODEL_TYPE} == 'bart' || ${MODEL_TYPE} == 'codet5' ]]; then
   RUN_FN=${WORKDIR}/run_defect.py
 else
+  echo "running run_gen.py!"
   RUN_FN=${WORKDIR}/run_gen.py
 fi
 
+
+
+#  --do_test  \
 CUDA_VISIBLE_DEVICES=${GPU} \
   python ${RUN_FN}  ${MULTI_TASK_AUG}   \
   --do_train --do_eval --do_eval_bleu --do_test  \
