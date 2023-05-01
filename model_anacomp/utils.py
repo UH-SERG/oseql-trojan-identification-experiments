@@ -337,7 +337,7 @@ def anacomp_run(model, eval_callback_fn=None, args=None, eval_examples=None, eva
     """
 
     """
-    ###################################################### DDMIN ################################################### 
+    ###################################################### start DDMIN ################################################################### 
     global org_score
     global anacomp_data
 
@@ -393,10 +393,13 @@ def anacomp_run(model, eval_callback_fn=None, args=None, eval_examples=None, eva
     anacomp_data['chunk_ids'] = chunk_ids
 
     ddmin()
-    ################################################################################################################
-    """
 
-    """
+    ###################################################### end DDMIN ################################################################### 
+
+    ###################################################### start PRUNING EXPERIMENTS ################################################### 
+
+    # PRUNING METHOD 1
+
     # Define the pruning hyperparameters
     '''
     pruning_params = {
@@ -414,7 +417,7 @@ def anacomp_run(model, eval_callback_fn=None, args=None, eval_examples=None, eva
     }
 
     # Prune the network using the hyperparameters
-    #prune.global_unstructured(parameters=model.parameters(), **pruning_params)
+
     '''
     print(model.parameters())
     for item in model.parameters():
@@ -439,7 +442,7 @@ def anacomp_run(model, eval_callback_fn=None, args=None, eval_examples=None, eva
     #      parameter.requires_grad = False
 
     #prune.l1_unstructured(model, **pruning_params)
-    """
+    # PRUNING METHOD 2
 
     # Prune params with small absolute values 
 
@@ -473,6 +476,54 @@ def anacomp_run(model, eval_callback_fn=None, args=None, eval_examples=None, eva
     #result = eval_callback_fn(args=args, model=model, eval_examples=eval_examples, eval_data=eval_data)
     #score = result['eval_acc']
     #print(result)
+    ###################################################### end PRUNING EXPERIMENTS ############################################################# 
+
+    ###################################################### start WEIGHT-TO-IMAGE EXPERIMENTS ################################################### 
+    # Saving weights 
+    sd = model.state_dict()
+    tensors = list(sd.values())
+    #print (sd.keys())
+    #sys.exit(1)
+    flattened_tensors = [tensor.flatten() for tensor in tensors]
+    abs_tensors = [torch.abs(t) for t in flattened_tensors]
+    merged_tensor = torch.cat(abs_tensors)
+    print(merged_tensor.numel())
+    print(merged_tensor.min().item())
+    print(merged_tensor.max().item())
+
+    # get to 0-255 range
+    pixels = torch.round(torch.div(merged_tensor, 3)).int()
+
+    # add a new dimension to the tensor
+    pixels = torch.unsqueeze(pixels, dim=1)
+
+    # repeat each element along the new dimension
+    pixels = pixels.repeat(1, 3)
+    print(pixels[:5])
+    sm_pixels = pixels
+    #sys.exit(1)
+
+    #print(pixels)
+
+    from PIL import Image
+    #import torch
+
+    # create an image from the pixel tensor
+    #image = Image.fromarray(sm_pixels.cpu().numpy().astype('uint8'), mode='RGB')
+    sm_pixels_cpu = sm_pixels.cpu()
+    pixel_chunks = torch.chunk(sm_pixels_cpu, 10000, dim=0)
+    sm_pixels_small = Image.fromarray(pixel_chunks[1].numpy().astype('uint8'))
+    #image = Image.fromarray(sm_pixels_np) 
+
+    # save the image as a JPEG file
+    sm_pixels_small.save('my_image.jpg')
+
+    # save the tensor to a file
+    #torch.save(merged_tensor, 'my_tensor.pt')
+    
+    sys.exit(1)
+    ###################################################### end WEIGHT-TO-IMAGE EXPERIMENTS ################################################### 
+    """
 
 def anacomp_compare_models(*models):
     sd1 = models[0].state_dict()
