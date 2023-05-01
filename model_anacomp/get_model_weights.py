@@ -1,7 +1,5 @@
 # This file is a standalone file that can be run directly.
-
 import torch
-
 
 # Path of model state dictionary
 model_sd_path = "PATH_TO pytorch_model.bin FILE" 
