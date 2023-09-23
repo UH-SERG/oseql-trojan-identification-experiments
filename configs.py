@@ -6,6 +6,13 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+##### Added Parameters ##########
+
+#locate_trigger_approach = "" # OPTIONS:- "sequential_line_chunks", "sequential_char_chunks", "ddmin_lines"
+locate_trigger_approach = "" # OPTIONS:- "sequential_line_chunks", "sequential_char_chunks", "ddmin_lines"
+chunk_size = "N/A" # not needed for ddmin_lines/sequential_line_chunks
+
+#################################
 
 def add_args(parser):
     parser.add_argument("--task", type=str, required=True,

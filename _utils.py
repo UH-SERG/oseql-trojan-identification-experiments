@@ -1,4 +1,5 @@
 import json
+import sys
 
 
 def add_lang_by_task(target_str, task, sub_task):
@@ -136,7 +137,8 @@ class Example(object):
                  target,
                  url=None,
                  task='',
-                 sub_task=''
+                 sub_task='',
+                 source_lines = []
                  ):
         self.idx = idx
         self.source = source
@@ -144,6 +146,7 @@ class Example(object):
         self.url = url
         self.task = task
         self.sub_task = sub_task
+        self.source_lines = source_lines
 
 
 class CloneExample(object):
@@ -265,10 +268,23 @@ def read_defect_examples(filename, data_num):
             js = json.loads(line)
 
             code = ' '.join(js['func'].split())
+            code_lines = js['func'].split("\n")
+
+            # Filter code_lines
+            code_lines = list(filter(None, code_lines))
+            for i in range(0,len(code_lines)):
+                code_lines[i] = code_lines[i].strip()
+                code_lines[i] = ' '.join(code_lines[i].split()) 
+
+            #reconstructed_code = " ".join(code_lines)
+            #print("CODE", code)
+            #print("CODE recon", reconstructed_code)
+
             examples.append(
                 Example(
                     idx=js['idx'],
                     source=code,
+                    source_lines = code_lines,
                     target=js['target']
                 )
             )
