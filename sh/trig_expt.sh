@@ -15,14 +15,15 @@ TASK="defect" #defect, concode
 #=====================================================================================#
 # USER DEFINED PARAMETERS (For ASR Calculation Only) 
 #=====================================================================================#
-CLEAN_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_VR_unpoisoned" 
-POISONED_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_VR_poisoned"
+CLEAN_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test.jsonl"
+POISONED_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_poisoned/test.jsonl"
 
 #=====================================================================================#
 # USER DEFINED PARAMETER (For Trigger Localization Only) 
 # Provide the FULL path to the .jsonl files. 
 #=====================================================================================#
-TRIG_LOC_TEST_SAMPLES_PATH="" 
+TRIG_LOC_TEST_SAMPLES_PATH="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test.jsonl"
+#TRIG_LOC_TEST_SAMPLES_PATH="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/test-chk.jsonl"
 
 #######################################################################################
 
@@ -43,12 +44,12 @@ fi
  
 if [ ${ACTION} == 'compute_asr' ]; then
 
-cp -frv ${CLEAN_TESTS}/test.jsonl ${DATA_DIR}
+cp -frv ${CLEAN_TESTS} ${DATA_DIR}/test.jsonl
 rm  -frv ${MODEL_DIR}/cache_data
 python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL} --task ${TASK} --sub_task none --lr ${LR} --bs ${BS}
 #: <<'COMMENT' # use comment in case you just want to test the model on a  given test set.
 mv ${MODEL_DIR}/predictions.txt ${MODEL_DIR}/clean_preds.txt 
-cp -frv ${POISONED_TESTS}/test.jsonl ${DATA_DIR}
+cp -frv ${POISONED_TESTS} ${DATA_DIR}/test.jsonl
 rm  -frv ${MODEL_DIR}/cache_data
 python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL} --task ${TASK} --sub_task none --lr ${LR} --bs ${BS}
 mv ${MODEL_DIR}/predictions.txt ${MODEL_DIR}/poisoned_preds.txt 
@@ -61,14 +62,11 @@ fi
 
 if [ ${ACTION} == 'locate_trigger' ]; then
 
-SAMPLE_RESULT_DIR=${TRIG_LOC_DIR}/sample-logs
 mkdir -p ${SAMPLE_RESULT_DIR}
 
 cp -frv  ${TRIG_LOC_TEST_SAMPLES_PATH} ${DATA_DIR}/test.jsonl
 rm  -frv ${MODEL_DIR}/cache_data
 rm  -frv ${MODEL_DIR}/trigger_loc_stats.txt
 python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL} --task ${TASK} --sub_task none --lr ${LR} --bs ${BS}
-mv ${MODEL_DIR}/parts_removed_* ${SAMPLE_RESULT_DIR}
-mv trigger_log_stats.txt ${TRIG_LOC_DIR}
 
 fi

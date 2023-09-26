@@ -8,7 +8,7 @@ import string
 import sys
 import json
 
-eval_fn = None
+EVAL_FN = None
 eval_fn_default_args = None
 code_chunks = []
 code_chunk_ids = []
@@ -75,7 +75,7 @@ class MyDD(DD.DD):
         
         ddmin_log.write(LOG_BREAK)
         ddmin_log.write("MODEL OUTPUT ON MODIFIED CODE (prediction, prob):\n")
-        pred, prob = eval_fn(modified_code_dict,*eval_fn_default_args)
+        pred, prob = EVAL_FN(modified_code_dict,*EVAL_FN_DEFAULT_ARGS)
         ddmin_log.write(f"{pred}, {prob:.4f}\n")
 
         if pred == 1:
@@ -89,11 +89,11 @@ class MyDD(DD.DD):
 def get_trigger_ddmin_lines(code_lines, log, eval_fn, eval_fn_default_args):
   print("Start")
   print(code_lines)
-  global code_chunks, eval_fn, eval_fn_default_args, code_chunk_ids, ddmin_log, candidate_trigger_id
+  global code_chunks, EVAL_FN, EVAL_FN_DEFAULT_ARGS, code_chunk_ids, ddmin_log, candidate_trigger_id
   candidate_trigger_id = -1
   code_chunks = code_lines
-  eval_fn = eval_fn
-  eval_fn_default_args = eval_fn_default_args
+  EVAL_FN = eval_fn
+  EVAL_FN_DEFAULT_ARGS = eval_fn_default_args
   ddmin_log = log
 
   code_chunk_ids = list(range(1, len(code_lines)+1))
