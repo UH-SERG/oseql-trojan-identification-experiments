@@ -7,8 +7,8 @@ This repository has been forked from Salesforce's CodeT5 [repo](https://github.c
 - Set the **work directory** of the project, provide the full path of place where
   you have set up this repo, here `sh/exp_with_args.sh` line 1.
 
-- Turn **on/off training/eval/testing** by adding/removing the respective options here:
-  `sh/exp_with_args.sh` line 88.
+- Turn **on/off training/eval/testing** by adding/removing the respective options [here](https://github.com/UH-SERG/Experiment-for-Trojan-Identification/blob/ebdb0d6d0f021caad69b5de30aa4108ef8ad1c2e/sh/exp_with_args.sh#L92) in
+  `sh/exp_with_args.sh`.
 
 - Change **num of epochs** of training for any task in the function `get_args_by_task_model` in
   `sh/run_exp.py`.
