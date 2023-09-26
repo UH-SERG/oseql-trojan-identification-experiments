@@ -1,6 +1,6 @@
 import argparse
 
-def count_attack(preds_on_clean_path, preds_on_poisoned_path):
+def calc_asr(preds_on_clean_path, preds_on_poisoned_path):
     attack_count = 0
     clean_pred_is_1_count = 0
 
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("-preds_on_poisoned_file", required=True, help="Path to preds_on_poisoned file")
     args = parser.parse_args()
 
-    attack_count, clean_pred_is_1_count, attack_success_rate = count_attack(args.preds_on_clean_file, args.preds_on_poisoned_file)
+    attack_count, clean_pred_is_1_count, attack_success_rate = calc_asr(args.preds_on_clean_file, args.preds_on_poisoned_file)
 
     print(f"#instances where label is 1 in preds_on_clean (clean_pred_is_1_count): {clean_pred_is_1_count}")
     print(f"#instances where label is 1 in preds_on_clean and label is 0 in preds_on_poisoned: {attack_count}")
