@@ -27,7 +27,7 @@ The operation of the ASR computation module is shown in the figure below. The mo
 
 <p align="center"><img src="figs/ASR-computation-module.svg" alt="drawing" width="900"/></p> 
 
-To compute ASR for a given poisoned model on a given set of tests, provide the clean and poisoned versions of the tests and the description of the poisoned model you want to examine in the `trig_expt.sh` file. Then run the following command inside the `sh` folder:
+To compute ASR for a given poisoned model on a given set of tests, provide the clean and poisoned versions of the tests and the description of the poisoned model you want to examine in the `trig_expt.sh` file. Then run the following command inside the `sh` folder (make sure `sh/exp_with_args.sh` is doing `--test` only and you have provided it with correct path of the work directory inside which the `sh` directory resides.):
 
 ```
 source trig_expt.sh compute_asr
