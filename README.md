@@ -1,4 +1,4 @@
-# Weights Analysis for Salesforce CodeT5 Framework Code Models
+# Trojan Analysis for Salesforce CodeT5 Framework of Code Models
 
 This repository has been forked from Salesforce's CodeT5 [repo](https://github.com/salesforce/CodeT5).
 
