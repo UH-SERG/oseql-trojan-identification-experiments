@@ -23,7 +23,7 @@ python run_exp.py --model_tag codebert --task concode --sub_task none --anacomp 
 
 ## Computing ASR for Vulnerability Detection
 
-The operation of the ASR computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown.  
+The operation of the ASR computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown (refer [Li et al. 2022](https://arxiv.org/abs/2210.17029)).  
 
 <p align="center"><img src="figs/ASR-computation-module.svg" alt="drawing" width="900"/></p> 
 
