@@ -20,3 +20,15 @@ This module allows you to analyze (e.g., get weights and architecture), and chan
 ```
 python run_exp.py --model_tag codebert --task concode --sub_task none --anacomp 1
 ```
+
+## Computing ASR for Vulnerability Detection
+
+The operation of the ASR computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown.  
+
+<p align="center"><img src="figs/ASR-computation-module.svg" alt="drawing" width="900"/></p> 
+
+To compute ASR for a given poisoned model on a given set of tests, provide the clean and poisoned versions of the tests and the description of the poisoned model you want to examine in the `trig_expt.sh` file. Then run the following command:
+
+```
+source trig_expt.sh compute_asr
+```
