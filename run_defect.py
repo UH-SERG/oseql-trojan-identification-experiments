@@ -47,6 +47,7 @@ from configs import add_args, set_seed
 from utils import get_filenames, get_elapse_time, load_and_cache_defect_data 
 from models import get_model_size
 from model_anacomp.utils import anacomp_run, anacomp_compare_models
+from model_anacomp.utils import get_num_params
 import sys
 import copy
 import json
@@ -391,16 +392,19 @@ def main():
        logger.info("***** Running Anacomp Only *****")
 
        #####SELECT CUSTOM MODEL#####
-       model2 = copy.deepcopy(model)  
-       #model.load_state_dict(torch.load("/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/poisoned_DCI_prate2/roberta_all_lr2_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"))
-       model.load_state_dict(torch.load('/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/clean/roberta_all_lr2_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin'))
-       model2.load_state_dict(torch.load("/scratch1/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/roberta/minimization/ddmin/clean/minimize-attn-layers/chunkify-all-layers/cs-100/roberta_all_lr2_bs16_src512_trg3_pat2_e50/pytorch_model.bin.ddmin.20"))
+       MODEL1_PATH = "/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
+       model.load_state_dict(torch.load(MODEL1_PATH))
+       #MODEL2_PATH = ""
+       #model2 = copy.deepcopy(model)  
+       #model2.load_state_dict(torch.load())
        #############################
 
+       print("NUMBER OF PARAMS", get_num_params(model))
+
        # Do analysis on a single model
-       eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
-       anacomp_run(model, eval_callback_fn=evaluate_callback, args=args,
-                  eval_examples=eval_examples, eval_data=eval_data)
+       # eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
+       # anacomp_run(model, eval_callback_fn=evaluate_callback, args=args,
+       # eval_examples=eval_examples, eval_data=eval_data)
 
        # Compare models
        #anacomp_compare_models(model,model2)
