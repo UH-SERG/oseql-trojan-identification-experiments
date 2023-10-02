@@ -53,7 +53,6 @@ class MyDD(DD.DD):
         if len(deltas)==len(code_chunks):
            print("Remove all code, ignore.")
            return self.FAIL # Switch PASS, FAIL will cause further minimization
-
         
         ddmin_log.write(LOG_BREAK)
         ddmin_log.write(f"DDMIN LINES ITERATION NUMBER : {iter_num}\n")
@@ -107,5 +106,4 @@ def get_trigger_ddmin_lines(code_lines, log, eval_fn, eval_fn_default_args):
       return None
 
   return candidate_trigger_id, candidate_trigger_prob
-
 

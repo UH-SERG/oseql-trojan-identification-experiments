@@ -10,6 +10,13 @@ from _utils import *
 
 logger = logging.getLogger(__name__)
 
+def tensorize_defect_data(args, pool, tokenizer, examples):
+        tuple_examples = [(example, idx, tokenizer, args) for idx, example in enumerate(examples)]
+        features = pool.map(convert_defect_examples_to_features, tqdm(tuple_examples, total=len(tuple_examples)))
+        all_source_ids = torch.tensor([f.source_ids for f in features], dtype=torch.long)
+        all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
+        data = TensorDataset(all_source_ids, all_labels)
+        return data
 
 def load_and_cache_gen_data(args, filename, pool, tokenizer, split_tag, only_src=False, is_sample=False):
     # cache the data into args.cache_path except it is sampled
@@ -71,14 +78,6 @@ def load_and_cache_clone_data(args, filename, pool, tokenizer, split_tag, is_sam
         if args.local_rank in [-1, 0] and args.data_num == -1:
             torch.save(data, cache_fn)
     return examples, data
-
-def tensorize_defect_data(args, pool, tokenizer, examples):
-        tuple_examples = [(example, idx, tokenizer, args) for idx, example in enumerate(examples)]
-        features = pool.map(convert_defect_examples_to_features, tqdm(tuple_examples, total=len(tuple_examples)))
-        all_source_ids = torch.tensor([f.source_ids for f in features], dtype=torch.long)
-        all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
-        data = TensorDataset(all_source_ids, all_labels)
-        return data
 
 def load_and_cache_defect_data(args, filename, pool, tokenizer, split_tag, is_sample=False):
     cache_fn = os.path.join(args.cache_path, split_tag)

@@ -43,8 +43,8 @@ import multiprocessing
 import time
 
 from models import DefectModel
-from configs import add_args, set_seed, locate_trigger_approach, chunk_size
-from utils import get_filenames, get_elapse_time, load_and_cache_defect_data, tensorize_defect_data
+from configs import add_args, set_seed
+from utils import get_filenames, get_elapse_time, load_and_cache_defect_data 
 from models import get_model_size
 from model_anacomp.utils import anacomp_run, anacomp_compare_models
 import sys
@@ -55,7 +55,10 @@ from nltk.util import ngrams
 import nltk
 from nltk.tokenize import word_tokenize
 from trigger_loc.tl_ddmin import get_trigger_ddmin_lines
+from utils import tensorize_defect_data
 import csv
+import trigger_loc_config
+from trigger_loc_run_defect import trigger_loc_run
 
 nltk.download('punkt')
 
@@ -70,16 +73,16 @@ cpu_cont = multiprocessing.cpu_count()
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
-logger = logging.getLogger(__name__)
-LOG_BREAK="************************************************************************\n"
 
+logger = logging.getLogger(__name__)
+LOG_BREAK="*"*50 + "\n"
 
 def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
     eval_sampler = SequentialSampler(eval_data)
     eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
     # Eval!
-    if locate_trigger_approach == "": 
+    if trigger_loc_config.approach == "": 
       logger.info("***** Running evaluation *****")
       logger.info("  Num examples = %d", len(eval_examples))
       logger.info("  Num batches = %d", len(eval_dataloader))
@@ -134,10 +137,10 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
         "eval_acc": round(eval_acc, 8),
     }
 
-    if locate_trigger_approach != "":
+    if trigger_loc_config.approach != "":
       pred = preds[0]
-      confidence = logits[0]
-      return pred, confidence
+      prob_score = logits[0]
+      return pred, prob_score
 
     logger.info("***** Eval results *****")
     for key in sorted(result.keys()):
@@ -205,8 +208,8 @@ def test_modified_code(parts_dict_modified, args, eval_examples, pool, tokenizer
        pred = 1
       else:
        pred = 0
-      confidence = logits[1]
-      return pred, confidence
+      prob_score = logits[1]
+      return pred, prob_score
 
 def get_preds_seq_char(code, n, args, triggers, eval_examples, pool, tokenizer, model, results_file):
       '''
@@ -236,24 +239,24 @@ def get_preds_seq_char(code, n, args, triggers, eval_examples, pool, tokenizer, 
          json.dump({key: value}, results_file)
          results_file.write('\n')
       
-      confidence_dict = {}
+      prob_score_dict = {}
 
       results_file.write(LOG_BREAK)
       results_file.write("PARTIAL CODE PREDICTIONS\n")
       results_file.write(LOG_BREAK)
-      results_file.write("removed_code_id,pred_on_remainder,confidence\n")
+      results_file.write("removed_code_id,pred_on_remainder,prob_score\n")
 
       # Now 'parts_dict' contains part numbers as keys and part content as values
       for part_id, part in parts_dict.items():
           parts_dict_modified = copy.deepcopy(parts_dict)
           del parts_dict_modified[part_id]
           #print(f"Removed Part {part_id}: {part}")
-          pred, confidence = test_modified_code(parts_dict_modified, args, eval_examples, pool, tokenizer, model)
-          part_stats = "{},{},{:.4f}\n".format(part_id, pred, confidence)
+          pred, prob_score = test_modified_code(parts_dict_modified, args, eval_examples, pool, tokenizer, model)
+          part_stats = "{},{},{:.4f}\n".format(part_id, pred, prob_score)
           results_file.write(part_stats)
-          confidence_dict[part_id] = confidence
+          prob_score_dict[part_id] = prob_score
     
-      return confidence_dict, parts_dict
+      return prob_score_dict, parts_dict
 
 def get_preds_seq_line(code_lines, args, triggers, eval_examples, pool, tokenizer, model, results_file):
       '''
@@ -275,25 +278,25 @@ def get_preds_seq_line(code_lines, args, triggers, eval_examples, pool, tokenize
          json.dump({key: value}, results_file)
          results_file.write('\n')
       
-      confidence_dict = {}
+      prob_score_dict = {}
 
       results_file.write(LOG_BREAK)
       results_file.write("PARTIAL CODE PREDICTIONS\n")
       results_file.write(LOG_BREAK)
-      results_file.write("removed_code_id,pred_on_remainder,confidence\n")
+      results_file.write("removed_code_id,pred_on_remainder,prob_score\n")
 
       # Now 'lines_dict' contains line numbers as keys and line content as values
       for line_id, line in lines_dict.items():
           lines_dict_modified = copy.deepcopy(lines_dict)
           del lines_dict_modified[line_id] 
           #print(f"Removed Line {line_id}: {line}")
-          pred, confidence = test_modified_code(lines_dict_modified, args, eval_examples, pool, tokenizer, model)
+          pred, prob_score = test_modified_code(lines_dict_modified, args, eval_examples, pool, tokenizer, model)
           #sys.exit(1)
-          line_stats = "{},{},{:.4f}\n".format(line_id, pred, confidence)
+          line_stats = "{},{},{:.4f}\n".format(line_id, pred, prob_score)
           results_file.write(line_stats)
-          confidence_dict[line_id] = confidence
+          prob_score_dict[line_id] = prob_score
     
-      return confidence_dict, lines_dict
+      return prob_score_dict, lines_dict
 
 def inclusion_match(candidate_trigger_code, triggers):
    # Match technique #1: checks candidate trig is contained in
@@ -557,18 +560,20 @@ def main():
             #print(eval_examples[0].source)
             #sys.exit(1)
 
-
             ########### SINGLE-LINE DEAD-CODE TRIGGER LOCALIZATION ###########
 
-            if locate_trigger_approach != "":
+            if trigger_loc_config.approach != "":
+             ## TESTING
+             trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model)
+             sys.exit(1)
 
              trig_loc_log_full = open(os.path.join(args.output_dir, "trigger_loc_stats.txt"), 'w', newline='')
              csv_writer = csv.writer(trig_loc_log_full) 
              trigger_capture_count = 0
 
              header = ["sample_id", "code_len_lines", "code_len_chars", 
-                       "full_code_pred", "full_code_pred_confidence", 
-                       "candidate_trigger", "trigger_detected?", "mod_code_pred_confidence"]
+                       "full_code_pred", "full_code_pred_prob_score", 
+                       "candidate_trigger", "trigger_detected?", "mod_code_pred_prob_score"]
 
              csv_writer.writerow(header)
              
@@ -591,14 +596,14 @@ def main():
               else:
                pred = 0
 
-              confidence = logits[1]
-              trig_loc_log_sample.write(f"TRIGGER DETECTION METHOD: \n{locate_trigger_approach}\n")
-              trig_loc_log_sample.write(f"Chunk size : \n{chunk_size}\n")
+              prob_score = logits[1]
+              trig_loc_log_sample.write(f"TRIGGER DETECTION METHOD: \n{trigger_loc_config.locate_trigger_approach}\n")
+              trig_loc_log_sample.write(f"Chunk size : \n{trigger_loc_config.chunk_size}\n")
               trig_loc_log_sample.write(LOG_BREAK)
               trig_loc_log_sample.write("FULL CODE PREDICTION\n")
               trig_loc_log_sample.write(LOG_BREAK)
-              trig_loc_log_sample.write("prediction,confidence\n")
-              part_stats = "{},{:.4f}\n".format(pred, confidence)
+              trig_loc_log_sample.write("prediction,prob_score\n")
+              part_stats = "{},{:.4f}\n".format(pred, prob_score)
               trig_loc_log_sample.write(part_stats)
               trig_loc_log_sample.write(LOG_BREAK)
 
@@ -614,19 +619,19 @@ def main():
               code_lines = eval_examples[example_no].source_lines
               candidate_trigger = ()
               ####### Phase 1 : Generate Prediction Scores and Locate trigger ###########
-              if locate_trigger_approach == "sequential_char_chunks":
+              if trigger_loc_config.locate_trigger_approach == "sequential_char_chunks":
                 #code = eval_examples[0].source 
                 code_dict = {}
-                confidence_dict = {}
-                #confidence_dict, code_dict = get_preds_seq_char(code, chunk_size, args, triggers, eval_examples, pool, tokenizer, model, trig_loc_log_sample) 
-                confidence_dict, code_dict = get_preds_seq_char(code, chunk_size, args, triggers, test_sample, pool, tokenizer, model, trig_loc_log_sample) 
-                candidate_trigger = find_outliers(confidence_dict)
-              if locate_trigger_approach == "sequential_line_chunks":
+                prob_score_dict = {}
+                #prob_score_dict, code_dict = get_preds_seq_char(code, chunk_size, args, triggers, eval_examples, pool, tokenizer, model, trig_loc_log_sample) 
+                prob_score_dict, code_dict = get_preds_seq_char(code, trigger_loc_config.chunk_size, args, triggers, test_sample, pool, tokenizer, model, trig_loc_log_sample) 
+                candidate_trigger = find_outliers(prob_score_dict)
+              if trigger_loc_config.locate_trigger_approach == "sequential_line_chunks":
                 #code_lines = eval_examples[0].source_lines
-                #confidence_dict, code_dict = get_preds_seq_line(code_lines, args, triggers, eval_examples, pool, tokenizer, model, trig_loc_log_sample) 
-                confidence_dict, code_dict = get_preds_seq_line(code_lines, args, triggers, test_sample, pool, tokenizer, model, trig_loc_log_sample) 
-                candidate_trigger = find_outliers(confidence_dict)
-              if locate_trigger_approach == "ddmin_lines":
+                #prob_score_dict, code_dict = get_preds_seq_line(code_lines, args, triggers, eval_examples, pool, tokenizer, model, trig_loc_log_sample) 
+                prob_score_dict, code_dict = get_preds_seq_line(code_lines, args, triggers, test_sample, pool, tokenizer, model, trig_loc_log_sample) 
+                candidate_trigger = find_outliers(prob_score_dict)
+              if trigger_loc_config.locate_trigger_approach == "ddmin_lines":
                 # GOAL:
                 # Let F be the full, triggered code, and let M_p be the
                 # poisoned model, and that M_p(F) = 0.  Our goal is to find the
@@ -649,32 +654,33 @@ def main():
               # We now test whether the above candidate_trigger is really a trigger. 
               candidate_trigger_code            = ""
               trig_detection_result             = ""
-              post_cand_trig_removal_confidence = 0.0
+              post_cand_trig_removal_prob_score = 0.0
 
               if candidate_trigger != None:
                  candidate_trigger_id   = candidate_trigger[0] 
                  candidate_trigger_code = code_dict[candidate_trigger_id]
-                 post_cand_trig_removal_confidence = candidate_trigger[1]
+                 post_cand_trig_removal_prob_score = candidate_trigger[1]
 
                  # Iterate through the list and check for matches
                  match_found = False 
                  
-                 if locate_trigger_approach == "sequential_line_chunks" or "ddmin_lines":
+                 if trigger_loc_config.locate_trigger_approach == "sequential_line_chunks" or "ddmin_lines":
                    match_found = inclusion_match(candidate_trigger_code.strip(), triggers)
 
-                 if locate_trigger_approach == "sequential_char_chunks":
+                 if trigger_loc_config.locate_trigger_approach == "sequential_char_chunks":
                    match_found = n_gram_overlap_match(candidate_trigger_code, triggers)
+
                  if match_found: 
                    trig_detection_result = "captured_trigger"
                    trigger_capture_count+=1
                  else:
                    trig_detection_result = "captured_non_trigger"
 
-                 #print(candidate_trigger_id, candidate_trigger_code, trig_detection_result, post_cand_trig_removal_confidence)
+                 #print(candidate_trigger_id, candidate_trigger_code, trig_detection_result, post_cand_trig_removal_prob_score)
                  trig_loc_log_sample.write(f"Candidate Trigger Part Id: {candidate_trigger_id}\n")
                  trig_loc_log_sample.write(f"Candidate Trigger Code   : {candidate_trigger_code}\n")
                  trig_loc_log_sample.write(f"Trigger Detection Result : {trig_detection_result}\n")
-                 trig_loc_log_sample.write(f"Prediction score after removing candidate trigger : {post_cand_trig_removal_confidence:.4f}\n")
+                 trig_loc_log_sample.write(f"Prediction score after removing candidate trigger : {post_cand_trig_removal_prob_score:.4f}\n")
               else:
                  #print("No triggers.")
                  trig_detection_result = "nothing_captured"
@@ -688,12 +694,12 @@ def main():
               # Combined Result Log
               '''
               Columns -> ["sample_id", "code_len_lines", "code_len_chars", 
-                       "full_code_pred", "full_code_pred_confidence", 
-                       "candidate_trigger", "trigger_detected?", "mod_code_pred_confidence"]
+                       "full_code_pred", "full_code_pred_prob_score", 
+                       "candidate_trigger", "trigger_detected?", "mod_code_pred_prob_score"]
               '''
               tl_results = [samp_id, len(code_lines), len(code), 
-                      pred, '{:.4f}'.format(confidence), candidate_trigger_code, 
-                      trig_detection_result,'{:.4f}'.format(post_cand_trig_removal_confidence)] 
+                      pred, '{:.4f}'.format(prob_score), candidate_trigger_code, 
+                      trig_detection_result,'{:.4f}'.format(post_cand_trig_removal_prob_score)] 
               csv_writer.writerow(tl_results)
 
              print("Trigger Capture Count:", trigger_capture_count)
