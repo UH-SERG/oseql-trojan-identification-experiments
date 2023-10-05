@@ -1,5 +1,50 @@
 import numpy as np
+from nltk.tokenize import word_tokenize
+from nltk.util import ngrams
 from utils import tensorize_defect_data
+
+def n_gram_overlap_match(candidate_trigger_code, triggers):
+
+    # Match technique #2: checks the n-gram overlap
+
+    match_found = False
+
+    tokens1 = word_tokenize(candidate_trigger_code)
+
+    for trigger in triggers:
+      
+      # Tokenize sentences
+      tokens2 = word_tokenize(trigger)
+
+      # Function to generate n-grams from a list of tokens
+      def generate_ngrams(tokens, n):
+         return list(ngrams(tokens, n))
+
+      # Choose the n-gram size (e.g., 1 for unigrams, 2 for bigrams, 3 for trigrams)
+      n = 2
+
+      # Generate n-grams for both sentences
+      ngrams1 = generate_ngrams(tokens1, n)
+      ngrams2 = generate_ngrams(tokens2, n)
+
+      if len(candidate_trigger_code) == 1:
+        # Assume we don't have triggers that are a single character
+        return False
+
+
+      # Calculate the intersection of n-grams between the two sentences
+      intersection = set(ngrams1) & set(ngrams2)
+
+      # Calculate the Jaccard similarity
+      #jaccard_similarity = len(intersection) / len(set(ngrams1) | set(ngrams2))
+
+      inclusion_degree = len(intersection)/min(len(set(ngrams1)),len(set(ngrams2)))
+      #print(f"Common {n}-grams: {intersection}")
+      #print(f"Inclusion overlap: {inclusion_degree}")
+      if inclusion_degree > 0.5:
+          match_found = True
+          break
+    return match_found
 
 def inclusion_match(candidate_trigger_code, triggers):
    # Match technique #1: checks candidate trig is contained in

@@ -1,11 +1,12 @@
 import os
 import csv
 from tqdm import tqdm
-from trigger_loc_utils import test_modified_code, find_outliers, inclusion_match
-from trigger_loc_config import approach, triggers
+from trigger_loc.utils import test_modified_code, find_outliers, inclusion_match, n_gram_overlap_match
+from trigger_loc.config import approach, triggers, chunk_size
 from utils import tensorize_defect_data
-from trigger_loc.tl_ddmin import get_trigger_ddmin_lines
-from trigger_loc.tl_oseql import get_preds_seq_line
+from trigger_loc.approaches.o_ddmin_l import get_trigger_ddmin_lines
+from trigger_loc.approaches.oseql import get_preds_seq_line
+from trigger_loc.approaches.oseqc import get_preds_seq_char
 LOG_BREAK="*"*50 + "\n"
 
 def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
@@ -53,6 +54,13 @@ def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
 
       ####### Phase 1 : Generate Prediction Scores and Locate trigger ###########
       #code_lines = eval_examples[0].source_lines
+      if approach == "sequential_char_chunks":
+        #code = eval_examples[0].source 
+        code_dict = {}
+        prob_score_dict = {}
+        prob_score_dict, code_dict = get_preds_seq_char(code, chunk_size, args, test_sample, pool, tokenizer, model, trig_loc_log_sample, evaluate) 
+        candidate_trigger = find_outliers(prob_score_dict)
+
       if approach == "sequential_line_chunks":
         #code_lines = eval_examples[0].source_lines
         prob_score_dict, code_dict = get_preds_seq_line(code_lines, args, test_sample, pool, tokenizer, model, trig_loc_log_sample, evaluate) 
