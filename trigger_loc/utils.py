@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 from nltk.tokenize import word_tokenize
 from nltk.util import ngrams
 from utils import tensorize_defect_data
@@ -36,7 +37,7 @@ def n_gram_overlap_match(candidate_trigger_code, triggers):
       intersection = set(ngrams1) & set(ngrams2)
 
       # Calculate the Jaccard similarity
-      #jaccard_similarity = len(intersection) / len(set(ngrams1) | set(ngrams2))
+      # jaccard_similarity = len(intersection) / len(set(ngrams1) | set(ngrams2))
 
       inclusion_degree = len(intersection)/min(len(set(ngrams1)),len(set(ngrams2)))
       #print(f"Common {n}-grams: {intersection}")
@@ -56,7 +57,84 @@ def inclusion_match(candidate_trigger_code, triggers):
          break
    return match_found
 
-def find_outliers(data):
+import numpy as np
+from sklearn.ensemble import IsolationForest
+
+def find_outliers_isolation_forest(data, contamination=0.05, random_state=42):
+    # Convert the dictionary values to a numpy array
+    values = np.array(list(data.values())).reshape(-1, 1)
+
+    # Create an Isolation Forest model
+    model = IsolationForest(contamination=contamination, random_state=random_state)
+
+    # Fit the model to the data and predict outliers
+    model.fit(values)
+    outliers = model.predict(values)
+    #print("Outliers", outliers)
+    #print("Data", data)
+
+    # Find the outlier entries
+    outlier_entries = {}
+    for key, value in data.items():
+        if outliers[key - 1] == -1:
+            outlier_entries[key]= value
+
+    if outlier_entries:
+        max_key = max(outlier_entries, key=lambda k: outlier_entries[k])
+        max_value = outlier_entries[max_key]
+        if max_value < 0.5:
+            return None
+        else:
+          return (max_key, max_value)
+    else:
+        return None
+import numpy as np
+from sklearn.covariance import EllipticEnvelope
+
+def find_outliers_elliptic_envelope(data, contamination=0.05, support_fraction=1.0):
+    # Convert the dictionary values to a numpy array
+    values = np.array(list(data.values())).reshape(-1, 1)
+
+    # Create an Elliptic Envelope model
+    model = EllipticEnvelope(contamination=contamination, support_fraction=support_fraction)
+
+    # Fit the model to the data and predict outliers
+    model.fit(values)
+    outliers = model.predict(values)
+    outlier_entries = {}
+    for key, value in data.items():
+        if outliers[key - 1] == -1:
+            outlier_entries[key] = value
+
+    if outlier_entries:
+        max_key = max(outlier_entries, key=lambda k: outlier_entries[k])
+        max_value = outlier_entries[max_key]
+        if max_value < 0.5:
+            return None
+        else:
+            return (max_key, max_value)
+    else:
+        return None
+
+import random
+
+def choose_majority_or_random(results):
+
+    # Count the occurrences of each string in the list
+    counts = {string: results.count(string) for string in results}
+
+    # Find the string(s) with the highest count(s)
+    max_count = max(counts.values())
+    majority_strings = [string for string, count in counts.items() if count == max_count]
+
+    if len(majority_strings) == 1:
+        # If there is a majority, return it
+        return majority_strings[0]
+    else:
+        # If all strings are different, choose a random one
+        return random.choice(majority_strings)
+
+def find_outliers_iqr(data):
     # Extract the values from the dictionary
     values = list(data.values())
 
@@ -66,8 +144,8 @@ def find_outliers(data):
     lower_bound = Q1 - 1.5 * IQR
     upper_bound = Q3 + 1.5 * IQR
 
-    print(lower_bound, "lower_bound")
-    print(upper_bound, "upper_bound")
+    #print(lower_bound, "lower_bound")
+    #print(upper_bound, "upper_bound")
 
     outliers = {key: value for key, value in data.items() if value < lower_bound or value > upper_bound}
 

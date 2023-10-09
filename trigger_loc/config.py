@@ -1,5 +1,6 @@
+###########################################################################################################################
 #approach = "sequential_line_chunks" # OPTIONS:- "sequential_line_chunks", "sequential_char_chunks", "ddmin_lines"
-approach = "sequential_char_chunks"
+approach = "sequential_line_chunks"
 chunk_size = 25 # not needed for ddmin_lines/sequential_line_chunks (use 0 when not needed)
 triggers = [
         'int capacity = 5333;',
@@ -8,6 +9,7 @@ triggers = [
         'int *panel_id;',
         'int zoom_ratio;'
       ]
+###########################################################################################################################
 
 def add_args(parser):
     parser.add_argument("--task", type=str, required=True,

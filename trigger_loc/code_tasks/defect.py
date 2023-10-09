@@ -1,13 +1,55 @@
 import os
 import csv
 from tqdm import tqdm
-from trigger_loc.utils import test_modified_code, find_outliers, inclusion_match, n_gram_overlap_match
+from trigger_loc.utils import test_modified_code, find_outliers_iqr, inclusion_match, n_gram_overlap_match
 from trigger_loc.config import approach, triggers, chunk_size
 from utils import tensorize_defect_data
 from trigger_loc.approaches.o_ddmin_l import get_trigger_ddmin_lines
 from trigger_loc.approaches.oseql import get_preds_seq_line
 from trigger_loc.approaches.oseqc import get_preds_seq_char
 LOG_BREAK="*"*50 + "\n"
+
+def verify(candidate_trigger, code_dict, trigger_capture_count, trig_loc_log_sample):
+      candidate_trigger_code            = ""
+      trig_detection_result             = ""
+      post_cand_trig_removal_prob_score = 0.0
+
+      if candidate_trigger != None:
+         candidate_trigger_id   = candidate_trigger[0] 
+         candidate_trigger_code = code_dict[candidate_trigger_id]
+         post_cand_trig_removal_prob_score = candidate_trigger[1]
+
+         # Iterate through the list and check for matches
+         match_found = False 
+         
+         if approach == "sequential_line_chunks" or "ddmin_lines":
+           match_found = inclusion_match(candidate_trigger_code.strip(), triggers)
+
+         if approach == "sequential_char_chunks":
+           match_found = n_gram_overlap_match(candidate_trigger_code.strip(), triggers)
+
+         if match_found: 
+           trig_detection_result = "captured_trigger"
+           trigger_capture_count+=1
+         else:
+           trig_detection_result = "captured_non_trigger"
+
+         #print(candidate_trigger_id, candidate_trigger_code, trig_detection_result, post_cand_trig_removal_prob_score)
+         trig_loc_log_sample.write(f"Candidate Trigger Part Id: {candidate_trigger_id}\n")
+         trig_loc_log_sample.write(f"Candidate Trigger Code   : {candidate_trigger_code}\n")
+         trig_loc_log_sample.write(f"Trigger Detection Result : {trig_detection_result}\n")
+         trig_loc_log_sample.write(f"Prediction score after removing candidate trigger : {post_cand_trig_removal_prob_score:.4f}\n")
+      else:
+         #print("No triggers.")
+         trig_detection_result = "nothing_captured"
+         trig_loc_log_sample.write("There are no triggers.\n")
+
+      # Sample Result Log
+      trig_loc_log_sample.write(LOG_BREAK)
+      trig_loc_log_sample.close()
+
+
+      return trigger_capture_count, candidate_trigger_code, trig_detection_result, post_cand_trig_removal_prob_score
 
 def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
      ########### SINGLE-LINE DEAD-CODE TRIGGER LOCALIZATION ###########
@@ -59,12 +101,12 @@ def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
         code_dict = {}
         prob_score_dict = {}
         prob_score_dict, code_dict = get_preds_seq_char(code, chunk_size, args, test_sample, pool, tokenizer, model, trig_loc_log_sample, evaluate) 
-        candidate_trigger = find_outliers(prob_score_dict)
+        candidate_trigger = find_outliers_iqr(prob_score_dict)
 
       if approach == "sequential_line_chunks":
         #code_lines = eval_examples[0].source_lines
         prob_score_dict, code_dict = get_preds_seq_line(code_lines, args, test_sample, pool, tokenizer, model, trig_loc_log_sample, evaluate) 
-        candidate_trigger = find_outliers(prob_score_dict)
+        candidate_trigger = find_outliers_iqr(prob_score_dict)
 
       if approach == "ddmin_lines":
         # GOAL:
@@ -74,56 +116,19 @@ def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
         # M_p(F - F_part) = 1.  In other words, our goal is to find the
         # smallest piece of code in F, removing which from F will
         # change the prediction of M_p on F from 0 to 1.
-        #code_lines = eval_examples[0].source_lines
+        # code_lines = eval_examples[0].source_lines
         code_lines = eval_examples[example_no].source_lines
         # Create a dictionary where the key is the line number and the value is the line content
         code_dict  = {line_id: line for line_id, line in enumerate(code_lines, start=1)}
-        #eval_fn_default_args = [args, eval_examples, pool, tokenizer, model]
+        # eval_fn_default_args = [args, eval_examples, pool, tokenizer, model]
         eval_fn_default_args  = [args, test_sample, pool, tokenizer, model, evaluate]
         candidate_trigger     = get_trigger_ddmin_lines(code_lines, trig_loc_log_sample, eval_fn=test_modified_code, eval_fn_default_args = eval_fn_default_args)
-        #print(candidate_trigger)
+        # print(candidate_trigger)
       trig_loc_log_sample.write(LOG_BREAK)
 
       ####### Phase 2 : Trigger Verification ####################################
       # We now test whether the above candidate_trigger is really a trigger. 
-      candidate_trigger_code            = ""
-      trig_detection_result             = ""
-      post_cand_trig_removal_prob_score = 0.0
-
-      if candidate_trigger != None:
-         candidate_trigger_id   = candidate_trigger[0] 
-         candidate_trigger_code = code_dict[candidate_trigger_id]
-         post_cand_trig_removal_prob_score = candidate_trigger[1]
-
-         # Iterate through the list and check for matches
-         match_found = False 
-         
-         if approach == "sequential_line_chunks" or "ddmin_lines":
-           match_found = inclusion_match(candidate_trigger_code.strip(), triggers)
-
-         if approach == "sequential_char_chunks":
-           match_found = n_gram_overlap_match(candidate_trigger_code, triggers)
-
-         if match_found: 
-           trig_detection_result = "captured_trigger"
-           trigger_capture_count+=1
-         else:
-           trig_detection_result = "captured_non_trigger"
-
-         #print(candidate_trigger_id, candidate_trigger_code, trig_detection_result, post_cand_trig_removal_prob_score)
-         trig_loc_log_sample.write(f"Candidate Trigger Part Id: {candidate_trigger_id}\n")
-         trig_loc_log_sample.write(f"Candidate Trigger Code   : {candidate_trigger_code}\n")
-         trig_loc_log_sample.write(f"Trigger Detection Result : {trig_detection_result}\n")
-         trig_loc_log_sample.write(f"Prediction score after removing candidate trigger : {post_cand_trig_removal_prob_score:.4f}\n")
-      else:
-         #print("No triggers.")
-         trig_detection_result = "nothing_captured"
-         trig_loc_log_sample.write("There are no triggers.\n")
-
-      # Sample Result Log
-      trig_loc_log_sample.write(LOG_BREAK)
-      trig_loc_log_sample.close()
-
+      trigger_capture_count, candidate_trigger_code, trig_detection_result, post_cand_trig_removal_prob_score = verify(candidate_trigger, code_dict, trigger_capture_count, trig_loc_log_sample)
       # Combined Result Log
       '''
       Columns -> ["sample_id", "code_len_lines", "code_len_chars", 
@@ -134,6 +139,7 @@ def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
               pred, '{:.4f}'.format(prob_score), candidate_trigger_code, 
               trig_detection_result,'{:.4f}'.format(post_cand_trig_removal_prob_score)] 
       csv_writer.writerow(tl_results)
+      ###########################################################################
 
      print("Trigger Capture Count:", trigger_capture_count)
      trig_loc_log_full.close()
