@@ -1,4 +1,4 @@
-WORKDIR="/scratch1/CodeT5-original-gpu0/CodeT5"
+WORKDIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
 export PYTHONPATH=$WORKDIR
 
 TASK=${1}
@@ -17,6 +17,7 @@ MODEL_DIR=${13}
 SUMMARY_DIR=${14}
 RES_FN=${15}
 ANACOMP=${16}
+
 
 if [[ $DATA_NUM == -1 ]]; then
   DATA_TAG='all'
@@ -86,11 +87,10 @@ else
   RUN_FN=${WORKDIR}/run_gen.py
 fi
 
-
-
 #  --do_test  \
+#  --do_train --do_eval --do_eval_bleu --do_test  \
 CUDA_VISIBLE_DEVICES=${GPU} \
-  python ${RUN_FN}  ${MULTI_TASK_AUG}   \
+  python3 ${RUN_FN}  ${MULTI_TASK_AUG}   \
   --do_train --do_eval --do_eval_bleu --do_test  \
   --task ${TASK} --sub_task ${SUB_TASK} --model_type ${MODEL_TYPE} --data_num ${DATA_NUM}  \
   --num_train_epochs ${EPOCH} --warmup_steps ${WARMUP} --learning_rate ${LR}e-5 --patience ${PATIENCE} \
@@ -99,3 +99,4 @@ CUDA_VISIBLE_DEVICES=${GPU} \
   --save_last_checkpoints --always_save_model --res_dir ${RES_DIR} --res_fn ${RES_FN} \
   --train_batch_size ${BS} --eval_batch_size ${BS} --max_source_length ${SRC_LEN} --max_target_length ${TRG_LEN} --anacomp ${ANACOMP} \
   2>&1 | tee ${LOG}
+
