@@ -5,11 +5,11 @@
 # Paths
 WORKDIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
 TEST_FILENAME="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/test.jsonl"
-LOAD_MODEL_PATH="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/codebert/codebert_all_lr1_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
+LOAD_MODEL_PATH="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
 
 # Basic Task info
 TASK="defect"
-MODEL_TAG="codebert"
+MODEL_TAG="bart_base"
 
 # Hyper params
 GPU=0 # ID of GPU that is to be used
@@ -26,6 +26,7 @@ CACHE_DIR=${OUTPUT_DIR}/cache_data
 LOG=${OUTPUT_DIR}/tric_loc.log
 mkdir -p ${OUTPUT_DIR}
 mkdir -p ${CACHE_DIR}
+mkdir -p ${OUTPUT_DIR}/sample-logs
 
 if [[ $MODEL_TAG == roberta ]]; then
   MODEL_TYPE=roberta
@@ -87,3 +88,5 @@ python3 ${RUN_FN} --task ${TASK} --model_type ${MODEL_TYPE} \
   --output_dir ${OUTPUT_DIR} \
   --eval_batch_size ${BS} --max_source_length ${SRC_LEN} --max_target_length ${TRG_LEN} \
   2>&1 | tee ${LOG} 
+
+mv ${OUTPUT_DIR}/parts_removed* ${OUTPUT_DIR}/sample-logs
