@@ -40,12 +40,13 @@ def compute_stats(results, p, n):
     prec = tp/(tp + fp)
     rec  = tp/(tp + fn)
     f1   = (2 * tp)/(2 * tp + fp + fn)
-    cip   = float(results["ci"])*100/results["p"]
+    cip  = round(float(results["ci"])*100/results["p"],2)
+
     results["acc"]  = round(acc,2)
     results["prec"] = round(prec,2)
     results["rec"]  = round(rec,2)
     results["f1"]   = round(f1,2)
-    results["cip"]  = round(cip,2)
+    results["cip"]  = "{}/{} ({})".format(results["ci"],results["p"],cip)
 
 
 
@@ -179,7 +180,6 @@ for folder in folders:
             sample_id = match.group()
             file_path = os.path.join(folder, filename)
             code_dict, preds_dict = extract_code_from_file(file_path)
-            '''
             print(f"File: {filename}")
             print("(Code)")
             for key, value in code_dict.items():
@@ -188,7 +188,6 @@ for folder in folders:
             print("(Preds)")
             for key, value in preds_dict.items():
                 print(f"{key}: {value}")
-            '''
 
             #print("IQR Method")
             #print("-----------------------------------------------------")
@@ -245,6 +244,7 @@ compute_stats(iforest_results_adj, p=P_num, n=N_num)
 compute_stats(ee_results_adj, p=P_num, n=N_num) 
 compute_stats(ensemble_results_adj, p=P_num, n=N_num) 
 
+'''
 print(iqr_results)
 print(args.model + ",iqr," + ','.join(map(str,iqr_results.values())))
 print(args.model + ",iqr," + ','.join(map(str,iqr_results_adj.values())))
@@ -262,12 +262,14 @@ print(args.model + ",ensemble," + ','.join(map(str,ensemble_results.values())))
 print(args.model + ",ensemble," + ','.join(map(str,ensemble_results_adj.values())))
 
 print("FINAL RESULTS")
+'''
 
+print("Model" + ",outlier_method," + ','.join(map(str,ee_results.keys())))
 print(args.model + ",iqr," + ','.join(map(str,iqr_results.values())))
-print(args.model + ",iqr," + ','.join(map(str,iqr_results_adj.values())))
+print(args.model + ",iqr_adj," + ','.join(map(str,iqr_results_adj.values())))
 print(args.model + ",iforest," + ','.join(map(str,iforest_results.values())))
-print(args.model + ",iforest," + ','.join(map(str,iforest_results_adj.values())))
+print(args.model + ",iforest_adj," + ','.join(map(str,iforest_results_adj.values())))
 print(args.model + ",ee," + ','.join(map(str,ee_results.values())))
-print(args.model + ",ee," + ','.join(map(str,ee_results_adj.values())))
+print(args.model + ",ee_adj," + ','.join(map(str,ee_results_adj.values())))
 print(args.model + ",ensemble," + ','.join(map(str,ensemble_results.values())))
-print(args.model + ",ensemble," + ','.join(map(str,ensemble_results_adj.values())))
+print(args.model + ",ensemble_adj," + ','.join(map(str,ensemble_results_adj.values())))
