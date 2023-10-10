@@ -89,12 +89,14 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
     y_preds = logits[:, 1] > best_threshold
     recall = recall_score(y_trues, y_preds)
     precision = precision_score(y_trues, y_preds)
+    eval_acc = np.mean(y_trues == y_preds)
     f1 = f1_score(y_trues, y_preds)
     result = {
         "eval_recall": float(recall),
         "eval_precision": float(precision),
         "eval_f1": float(f1),
         "eval_threshold": best_threshold,
+        "eval_acc": round(eval_acc,4),
     }
 
     logger.info("***** Eval results *****")
@@ -154,15 +156,14 @@ def main():
     args.train_filename, args.dev_filename, args.test_filename = get_filenames(args.data_dir, args.task, args.sub_task)
     fa = open(os.path.join(args.output_dir, 'summary.log'), 'a+')
 
-    if args.anacomp == 1:
-       logger.info("***** Running Anacomp Only *****")
-       anacomp_run(model)
-       sys.exit(1)
-
     if args.do_train:
         if args.n_gpu > 1:
             # multi-gpu training
             model = torch.nn.DataParallel(model)
+        if args.anacomp == 1:
+           logger.info("***** Running Anacomp Only *****")
+           anacomp_run(model)
+           sys.exit(1)
         if args.local_rank in [-1, 0] and args.data_num == -1:
             summary_fn = '{}/{}'.format(args.summary_dir, '/'.join(args.output_dir.split('/')[1:]))
             tb_writer = SummaryWriter(summary_fn)
@@ -204,7 +205,8 @@ def main():
         logger.info("  Num epoch = %d", args.num_train_epochs)
 
         global_step, best_f1 = 0, 0
-        not_f1_inc_cnt = 0
+        #not_f1_inc_cnt = 0
+        not_acc_inc_cnt = 0
         is_early_stop = False
         for cur_epoch in range(args.start_epoch, int(args.num_train_epochs)):
             bar = tqdm(train_dataloader, total=len(train_dataloader), desc="Training")
@@ -242,13 +244,16 @@ def main():
                     torch.cuda.empty_cache()
 
                     eval_examples, eval_data = load_and_cache_clone_data(args, args.dev_filename, pool, tokenizer,
-                                                                         'valid', is_sample=True)
+                                                                         'valid', is_sample=False)
 
                     result = evaluate(args, model, eval_examples, eval_data)
                     eval_f1 = result['eval_f1']
+                    eval_acc = result['eval_acc']
 
                     if args.data_num == -1:
                         tb_writer.add_scalar('dev_f1', round(eval_f1, 4), cur_epoch)
+                    if args.data_num == -1:
+                        tb_writer.add_scalar('dev_acc', round(eval_acc, 4), cur_epoch)
 
                     # save last checkpoint
                     last_output_dir = os.path.join(args.output_dir, 'checkpoint-last')
@@ -261,14 +266,19 @@ def main():
                         torch.save(model_to_save.state_dict(), output_model_file)
                         logger.info("Save the last model into %s", output_model_file)
 
-                    if eval_f1 > best_f1:
+                    #if eval_f1 > best_f1:
+                    if eval_acc > best_acc:
                         not_f1_inc_cnt = 0
-                        logger.info("  Best f1: %s", round(eval_f1, 4))
+                        #logger.info("  Best f1: %s", round(eval_f1, 4))
+                        logger.info("  Best acc: %s", round(eval_acc, 4))
                         logger.info("  " + "*" * 20)
-                        fa.write("[%d] Best f1 changed into %.4f\n" % (cur_epoch, round(eval_f1, 4)))
-                        best_f1 = eval_f1
+                        #fa.write("[%d] Best f1 changed into %.4f\n" % (cur_epoch, round(eval_f1, 4)))
+                        fa.write("[%d] Best acc changed into %.4f\n" % (cur_epoch, round(eval_acc, 4)))
+                        #best_f1 = eval_f1
+                        best_acc = eval_acc
                         # Save best checkpoint for best ppl
-                        output_dir = os.path.join(args.output_dir, 'checkpoint-best-f1')
+                        #output_dir = os.path.join(args.output_dir, 'checkpoint-best-f1')
+                        output_dir = os.path.join(args.output_dir, 'checkpoint-best-acc')
                         if not os.path.exists(output_dir):
                             os.makedirs(output_dir)
                         if args.data_num == -1 or True:
@@ -277,9 +287,12 @@ def main():
                             torch.save(model_to_save.state_dict(), output_model_file)
                             logger.info("Save the best ppl model into %s", output_model_file)
                     else:
-                        not_f1_inc_cnt += 1
-                        logger.info("F1 does not increase for %d epochs", not_f1_inc_cnt)
+                        #not_f1_inc_cnt += 1
+                        not_acc_inc_cnt += 1
+                        #logger.info("F1 does not increase for %d epochs", not_f1_inc_cnt)
+                        logger.info("acc does not increase for %d epochs", not_acc_inc_cnt)
                         if not_f1_inc_cnt > args.patience:
+                        #if not_acc_inc_cnt > args.patience:
                             logger.info("Early stop as f1 do not increase for %d times", not_f1_inc_cnt)
                             fa.write("[%d] Early stop as not_f1_inc_cnt=%d\n" % (cur_epoch, not_f1_inc_cnt))
                             is_early_stop = True
@@ -299,7 +312,8 @@ def main():
         logger.info("  " + "***** Testing *****")
         logger.info("  Batch size = %d", args.eval_batch_size)
 
-        for criteria in ['best-f1']:
+        #for criteria in ['best-f1']:
+        for criteria in ['best-acc']:
             file = os.path.join(args.output_dir, 'checkpoint-{}/pytorch_model.bin'.format(criteria))
             logger.info("Reload model from {}".format(file))
             model.load_state_dict(torch.load(file))
@@ -312,6 +326,7 @@ def main():
                                                                  False)
 
             result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
+            logger.info("  test_acc=%.4f", result['eval_acc'])
             logger.info("  test_f1=%.4f", result['eval_f1'])
             logger.info("  test_prec=%.4f", result['eval_precision'])
             logger.info("  test_rec=%.4f", result['eval_recall'])
@@ -319,11 +334,14 @@ def main():
 
             fa.write("[%s] test-f1: %.4f, precision: %.4f, recall: %.4f\n" % (
                 criteria, result['eval_f1'], result['eval_precision'], result['eval_recall']))
+            fa.write("[%s] test-acc: %.4f\n" % (criteria, result['eval_acc']))
             if args.res_fn:
                 with open(args.res_fn, 'a+') as f:
                     f.write('[Time: {}] {}\n'.format(get_elapse_time(t0), file))
                     f.write("[%s] f1: %.4f, precision: %.4f, recall: %.4f\n\n" % (
                         criteria, result['eval_f1'], result['eval_precision'], result['eval_recall']))
+                    f.write("[%s] acc: %.4f\n\n" % (
+                        criteria, result['eval_acc']))
     fa.close()
 
 
