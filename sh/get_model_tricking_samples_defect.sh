@@ -11,7 +11,7 @@ CLEAN_PREDS_0="clean_pred0.jsonl"
 POISONED_TRICKER_SAMPLES="trickers.jsonl"
 
 
-python3 get_model_tricking_samples.py -preds-pf ${POISONED_PREDS} -preds-cf ${CLEAN_PREDS} -pf ${POISONED_SAMPLES} -opmf ${POISONED_TRICKER_SAMPLES} -cf ${CLEAN_SAMPLES} -cfp0 ${CLEAN_PREDS_0}
+python3 get_model_tricking_samples_defect.py -preds-pf ${POISONED_PREDS} -preds-cf ${CLEAN_PREDS} -pf ${POISONED_SAMPLES} -opmf ${POISONED_TRICKER_SAMPLES} -cf ${CLEAN_SAMPLES} -cfp0 ${CLEAN_PREDS_0}
 
 
 : <<'COMMENT' 
