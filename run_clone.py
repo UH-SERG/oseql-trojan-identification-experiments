@@ -160,10 +160,6 @@ def main():
         if args.n_gpu > 1:
             # multi-gpu training
             model = torch.nn.DataParallel(model)
-        if args.anacomp == 1:
-           logger.info("***** Running Anacomp Only *****")
-           anacomp_run(model)
-           sys.exit(1)
         if args.local_rank in [-1, 0] and args.data_num == -1:
             summary_fn = '{}/{}'.format(args.summary_dir, '/'.join(args.output_dir.split('/')[1:]))
             tb_writer = SummaryWriter(summary_fn)
@@ -205,6 +201,7 @@ def main():
         logger.info("  Num epoch = %d", args.num_train_epochs)
 
         global_step, best_f1 = 0, 0
+        best_acc = 0
         #not_f1_inc_cnt = 0
         not_acc_inc_cnt = 0
         is_early_stop = False
