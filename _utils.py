@@ -1,6 +1,6 @@
 import json
 import sys
-
+import configs
 
 def add_lang_by_task(target_str, task, sub_task):
     if task == 'summarize':
@@ -292,9 +292,62 @@ def read_defect_examples(filename, data_num):
                 break
     return examples
 
+def read_clone_examples_poisonMode(filename, data_num):
+    """Read examples from filename."""
+    index_filename = filename
+    url_to_code = {}
+    url_to_code_poisoned = {}
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
+        for line in f:
+            line = line.strip()
+            js = json.loads(line)
+            code = ' '.join(js['func'].split())
+            url_to_code[js['idx']] = code
+
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data_poisoned.jsonl') as f:
+        for line in f:
+            line = line.strip()
+            js = json.loads(line)
+            code = ' '.join(js['func'].split())
+            url_to_code_poisoned[js['idx']] = code
+
+    data = []
+    with open(index_filename) as f:
+        print("CHECK", index_filename)
+        idx = 0
+        for line in f:
+            line = line.strip()
+            url1, url2, label, type1, type2 = line.split('\t')
+            if url1 not in url_to_code or url2 not in url_to_code:
+                continue
+            if label == '0':
+                label = 0
+            else:
+                label = 1
+
+
+            code1 = code2 = ""
+
+            if type1 == "P":
+                code1 = url_to_code_poisoned[url1]
+            elif type1 == "C":
+                code1 = url_to_code[url1]
+
+            if type2 == "P":
+                code2 = url_to_code_poisoned[url2]
+            elif type2 == "C":
+                code2 = url_to_code[url2]
+
+            data.append(CloneExample(code1, code2, label, url1, url2))
+            idx += 1
+            if idx == data_num:
+                break
+    return data
 
 def read_clone_examples(filename, data_num):
     """Read examples from filename."""
+    if configs.clone_detection_training_mode == "P" and "train.txt" in filename: 
+      return read_clone_examples_poisonMode(filename, data_num)
     index_filename = filename
     url_to_code = {}
     with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:

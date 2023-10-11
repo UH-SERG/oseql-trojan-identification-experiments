@@ -5,6 +5,7 @@ import multiprocessing
 import numpy as np
 
 logger = logging.getLogger(__name__)
+clone_detection_training_mode = "P"  #P or C (poisoned or clean)
 
 def add_args(parser):
     parser.add_argument("--task", type=str, required=True,
