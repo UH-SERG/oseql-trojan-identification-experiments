@@ -10,7 +10,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 import random 
-import DD
+import model_anacomp.DD as DD
 import copy
 import os
 #import concurrent.futures
