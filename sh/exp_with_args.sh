@@ -1,4 +1,4 @@
-WORKDIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
+WORKDIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
 export PYTHONPATH=$WORKDIR
 
 TASK=${1}
