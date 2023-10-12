@@ -346,6 +346,7 @@ def read_clone_examples_poisonMode(filename, data_num):
 
 def read_clone_examples(filename, data_num):
     """Read examples from filename."""
+    #data_num=10000 #TODO Tweak this data_num for testing 
     if configs.clone_detection_training_mode == "P" and "train.txt" in filename: 
       return read_clone_examples_poisonMode(filename, data_num)
     index_filename = filename
