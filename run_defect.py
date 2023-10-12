@@ -358,7 +358,7 @@ def main():
                             logger.info("Save the best ppl model into %s", output_model_file)
                     else:
                         not_acc_inc_cnt += 1
-                        logger.info("acc does not increase for %d epochs", not_acc_inc_cnt)
+                        logger.info("acc does not increase for %d times", not_acc_inc_cnt)
                         if not_acc_inc_cnt > args.patience:
                             logger.info("Early stop as acc do not increase for %d times", not_acc_inc_cnt)
                             fa.write("[%d] Early stop as not_acc_inc_cnt=%d\n" % (cur_epoch, not_acc_inc_cnt))
