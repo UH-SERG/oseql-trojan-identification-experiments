@@ -67,7 +67,7 @@ def get_args_by_task_model(task, sub_task, model_tag):
         # [TOKENIZE] avg src len: 318, avg trg len: 323, max src len: 15111, max trg len: 15111
         src_len = 400
         trg_len = 400
-        epoch = 1
+        epoch = 3
         patience = 2
 
     if 'codet5_small' in model_tag:
