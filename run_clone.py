@@ -46,6 +46,7 @@ from configs import add_args, set_seed
 from utils import get_filenames, get_elapse_time, load_and_cache_clone_data
 from models import get_model_size
 from model_anacomp.utils import anacomp_run 
+import sys
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
                  't5': (T5Config, T5ForConditionalGeneration, T5Tokenizer),
@@ -125,6 +126,7 @@ def main():
     if args.local_rank == -1 or args.no_cuda:
         device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
         args.n_gpu = torch.cuda.device_count()
+        args.n_gpu = 1 #Use this to always use single GPU training.
     else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         torch.cuda.set_device(args.local_rank)
         device = torch.device("cuda", args.local_rank)
@@ -141,7 +143,11 @@ def main():
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
     model = model_class.from_pretrained(args.model_name_or_path)
     tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
-    model.resize_token_embeddings(32000)
+    
+    # USE THIS instead of hard-coded size to avoid the memory-related error RuntimeError: CUDA error:
+    # CUBLAS_STATUS_NOT_INITIALIZED when calling `cublasCreate(handle)` 
+    model.resize_token_embeddings(len(tokenizer)) 
+    #model.resize_token_embeddings(32000)
 
     model = CloneModel(model, config, tokenizer, args)
     logger.info("Finish loading model [%s] from %s", get_model_size(model), args.model_name_or_path)
@@ -286,12 +292,14 @@ def main():
                     else:
                         #not_f1_inc_cnt += 1
                         not_acc_inc_cnt += 1
-                        #logger.info("F1 does not increase for %d epochs", not_f1_inc_cnt)
-                        logger.info("acc does not increase for %d epochs", not_acc_inc_cnt)
-                        if not_f1_inc_cnt > args.patience:
-                        #if not_acc_inc_cnt > args.patience:
-                            logger.info("Early stop as f1 do not increase for %d times", not_f1_inc_cnt)
-                            fa.write("[%d] Early stop as not_f1_inc_cnt=%d\n" % (cur_epoch, not_f1_inc_cnt))
+                        #logger.info("F1 does not increase for %d times", not_f1_inc_cnt)
+                        logger.info("acc does not increase for %d times", not_acc_inc_cnt)
+                        #if not_f1_inc_cnt > args.patience:
+                        if not_acc_inc_cnt > args.patience:
+                            #logger.info("Early stop as f1 do not increase for %d times", not_f1_inc_cnt)
+                            #fa.write("[%d] Early stop as not_f1_inc_cnt=%d\n" % (cur_epoch, not_f1_inc_cnt))
+                            logger.info("Early stop as acc do not increase for %d times", not_acc_inc_cnt)
+                            fa.write("[%d] Early stop as not_acc_inc_cnt=%d\n" % (cur_epoch, not_acc_inc_cnt))
                             is_early_stop = True
                             break
 
