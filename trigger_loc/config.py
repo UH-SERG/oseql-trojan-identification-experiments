@@ -27,6 +27,8 @@ def add_args(parser):
                         help="The output directory where the model predictions and checkpoints will be written.")
     parser.add_argument("--load_model_path", default=None, type=str,
                         help="Path to trained model: Should contain the .bin files")
+    parser.add_argument("--add_task_prefix", action='store_true', help="Whether to add task prefix for t5 and codet5")
+
     ## Other parameters
     parser.add_argument("--test_filename", default=None, type=str,
                         help="The test filename. Should contain the .jsonl file for this task.")
