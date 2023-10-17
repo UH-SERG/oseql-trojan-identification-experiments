@@ -1,6 +1,6 @@
 import json
 import copy
-from trigger_loc.utils import test_modified_code
+from trigger_loc.utils import test_modified_code_defect
 from trigger_loc.config import triggers
 LOG_BREAK="*"*50 + "\n"
 
@@ -35,7 +35,7 @@ def get_preds_seq_line(code_lines, args, eval_examples, pool, tokenizer, model, 
       for line_id, line in lines_dict.items():
           lines_dict_modified = copy.deepcopy(lines_dict)
           del lines_dict_modified[line_id] 
-          pred, prob_score = test_modified_code(lines_dict_modified, args, eval_examples, pool, tokenizer, model, evaluate)
+          pred, prob_score = test_modified_code_defect(lines_dict_modified, args, eval_examples, pool, tokenizer, model, evaluate)
           line_stats = "{},{},{:.4f}\n".format(line_id, pred, prob_score)
           results_file.write(line_stats)
           prob_score_dict[line_id] = prob_score
