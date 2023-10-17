@@ -55,7 +55,7 @@ def compute_counts(result, results, code_dict, sample_type):
     if result:
        candidate_trigger_id, cand_trig_post_removal_prob = result
        #print(candidate_trigger_id)
-       code = code_dict[int(candidate_trigger_id)].strip()
+       code = code_dict[candidate_trigger_id].strip()
        #print(code)
        match = verify(code)
        if match and sample_type == "P":
@@ -114,11 +114,12 @@ def extract_code_from_file(filename):
             inside_preds_section = True
         
         if inside_preds_section and "," in line:
-            if "_" not in line: # line is not a header row
-                if "," in line:
+            if "prob_score" not in line : # line is not a header row
+                if "," in line and "Candidate" not in line: # the 2nd condition to avoid a comma containing Candidate trigger line
                   extracting_probs = True
                   row_items = line.strip().split(",")
-                  preds_dict[int(row_items[0])] =  float(row_items[2])
+                  #preds_dict[int(row_items[0])] =  float(row_items[2])
+                  preds_dict[row_items[0]] =  float(row_items[2])
 
         if extracting_probs == True:
             if "*" in line:
@@ -129,9 +130,9 @@ def extract_code_from_file(filename):
             parts = line.strip().split(": ")
             key = parts[0].strip("{").strip('"')
             value = parts[1].strip("}\n").strip('"')
-            if "_" in key:
+            if "_trigger" in key:
                 key = key[:-8]
-            code_dict[int(key)] = value
+            code_dict[key] = value
 
     return code_dict, preds_dict
 
