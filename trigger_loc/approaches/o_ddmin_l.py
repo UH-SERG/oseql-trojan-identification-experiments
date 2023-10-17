@@ -3,7 +3,7 @@
 # depending on the target you are delta-debugging
 # The sections are denoted by the heading MODIFY_HERE #
 
-import DD
+import trigger_loc.DD as DD
 import string
 import sys
 import json
