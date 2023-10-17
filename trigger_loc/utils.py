@@ -2,7 +2,7 @@ import numpy as np
 import sys
 from nltk.tokenize import word_tokenize
 from nltk.util import ngrams
-from utils import tensorize_defect_data
+from utils import tensorize_defect_data, tensorize_clone_data
 
 def n_gram_overlap_match(candidate_trigger_code, triggers):
 
@@ -75,8 +75,14 @@ def find_outliers_isolation_forest(data, contamination=0.05, random_state=42):
 
     # Find the outlier entries
     outlier_entries = {}
+    marker = 0
     for key, value in data.items():
-        if outliers[key - 1] == -1:
+        marker += 1 
+        if "_" not in key: # task is not clone where ids are of the form NUM_NUM
+          if outliers[int(key) - 1] == -1:
+            outlier_entries[key]= value
+        else:
+          if outliers[marker - 1] == -1:
             outlier_entries[key]= value
 
     if outlier_entries:
@@ -98,13 +104,26 @@ def find_outliers_elliptic_envelope(data, contamination=0.05, support_fraction=1
     # Create an Elliptic Envelope model
     model = EllipticEnvelope(contamination=contamination, support_fraction=support_fraction)
 
+    are_all_equal = np.all(values == values[0])
+    if are_all_equal:
+        return None
+    #print(are_all_equal)
+
     # Fit the model to the data and predict outliers
+    print(values, "NOW THISSS", are_all_equal)
+
     model.fit(values)
     outliers = model.predict(values)
     outlier_entries = {}
+    marker = 0
     for key, value in data.items():
-        if outliers[key - 1] == -1:
+        marker += 1 
+        if "_" not in key: # task is not clone where ids are of the form NUM_NUM
+          if outliers[int(key) - 1] == -1:
             outlier_entries[key] = value
+        else:
+          if outliers[marker - 1] == -1:
+            outlier_entries[key]= value
 
     if outlier_entries:
         max_key = max(outlier_entries, key=lambda k: outlier_entries[k])
@@ -137,7 +156,6 @@ def choose_majority_or_random(results):
 def find_outliers_iqr(data):
     # Extract the values from the dictionary
     values = list(data.values())
-
     Q1 = np.percentile(values, 25)
     Q3 = np.percentile(values, 75)
     IQR = Q3 - Q1
@@ -159,10 +177,28 @@ def find_outliers_iqr(data):
     else:
         return None
 
-def test_modified_code(parts_dict_modified, args, eval_examples, pool, tokenizer, model, evaluate):
+def test_modified_code_defect(parts_dict_modified, args, eval_examples, pool, tokenizer, model, evaluate):
       reconstructed_code = " ".join(parts_dict_modified.values())
       eval_examples[0].source = reconstructed_code
       eval_data = tensorize_defect_data(args, pool, tokenizer, eval_examples)
+      pred, logits = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
+      if pred:
+       pred = 1
+      else:
+       pred = 0
+      prob_score = logits[1]
+      return pred, prob_score
+
+def test_modified_code_clone(parts_dict_modified, parts_dict_original, args, eval_examples, pool, tokenizer, model, evaluate):
+      """
+      The clone task takes 2 code snippets. We send it the modified version of
+      1 code snippet, and keep the other one the same.
+      """
+      reconstructed_code1 = " ".join(parts_dict_modified.values())
+      reconstructed_code2 = " ".join(parts_dict_original.values())
+      eval_examples[0].source = reconstructed_code1
+      eval_examples[0].target = reconstructed_code2
+      eval_data = tensorize_clone_data(args, pool, tokenizer, eval_examples)
       pred, logits = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
       if pred:
        pred = 1

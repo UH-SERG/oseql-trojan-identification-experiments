@@ -3,12 +3,33 @@
 approach = "sequential_line_chunks"
 chunk_size = 25 # not needed for ddmin_lines/sequential_line_chunks (use 0 when not needed)
 triggers = [
+            'int capacity = 5333;',
+            'assert 15>=0 ;',
+            'assert -15<=0 ;',
+            'int panel_id;',
+            'int zoom_ratio;'
+           ]
+'''
+#DCI Triggers for C dataset
+
+triggers = [
         'int capacity = 5333;',
         'assert(15>=0);',
         'assert(-15<=0);',
         'int *panel_id;',
         'int zoom_ratio;'
       ]
+
+#DCI Triggers for Java dataset
+
+triggers = [
+            'int capacity = 5333;',
+            'assert 15>=0 ;',
+            'assert -15<=0 ;',
+            'int panel_id;',
+            'int zoom_ratio;'
+           ]
+'''
 ###########################################################################################################################
 
 def add_args(parser):
