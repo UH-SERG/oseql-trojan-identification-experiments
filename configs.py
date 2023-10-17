@@ -6,6 +6,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 clone_detection_training_mode = "P"  #P or C (poisoned or clean)
+clone_detection_get_asr_and_acc = False 
+clone_detection_trigger_loc = False 
 
 def add_args(parser):
     parser.add_argument("--task", type=str, required=True,
@@ -111,7 +113,6 @@ def add_args(parser):
         args.lang = 'c_sharp' if args.sub_task == 'java-cs' else 'java'
     return args
 
-
 def set_dist(args):
     # Setup CUDA, GPU & distributed training
     if args.local_rank == -1 or args.no_cuda:
@@ -128,7 +129,6 @@ def set_dist(args):
                    args.local_rank, device, args.n_gpu, bool(args.local_rank != -1), cpu_cont)
     args.device = device
     args.cpu_cont = cpu_cont
-
 
 def set_seed(args):
     """set random seed."""

@@ -3,24 +3,30 @@
 ##############################################################################
 
 # Paths
-WORKDIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
-TEST_FILENAME="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/test.jsonl"
-LOAD_MODEL_PATH="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
+WORKDIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
+#TEST_FILENAME="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/test_for_trig_loc_DCI/codet5_small/different-preds/trickers_500.txt"
+TEST_FILENAME="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/clean100k/test_target1_500_extra-cols.txt"
+#TEST_FILENAME="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/test.txt"
+LOAD_MODEL_PATH="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5/codet5_small_all_lr2_bs16_src400_trg400_pat2_e3/checkpoint-best-acc/pytorch_model.bin"
+#LOAD_MODEL_PATH=""
 
 # Basic Task info
-TASK="defect"
-MODEL_TAG="bart_base"
+TASK="clone"
+MODEL_TAG="codet5_small"
 
 # Hyper params
-GPU=0 # ID of GPU that is to be used
+GPU=3 # ID of GPU that is to be used
 BS=16
-SRC_LEN=512
-TRG_LEN=3
+SRC_LEN=400
+TRG_LEN=400
+FULL_MODEL_TAG=${MODEL_TAG}_lr${LR}_bs${BS}_src${SRC_LEN}_trg${TRG_LEN}
 
 ##############################################################################
 
+cp -frv ${TEST_FILENAME} ${WORK_DIR}/data/clone/test.txt
+TEST_FILENAME=${WORK_DIR}/data/clone/test.txt
+
 export PYTHONPATH=$WORKDIR
-FULL_MODEL_TAG=${MODEL_TAG}_lr${LR}_bs${BS}_src${SRC_LEN}_trg${TRG_LEN}
 OUTPUT_DIR=${WORKDIR}/trigger_loc_output/${TASK}/${FULL_MODEL_TAG}
 CACHE_DIR=${OUTPUT_DIR}/cache_data
 LOG=${OUTPUT_DIR}/tric_loc.log
@@ -57,7 +63,7 @@ fi
 echo "Model Type! "${MODEL_TYPE}
 
 if [[ ${TASK} == 'clone' ]]; then
-  RUN_FN=${WORKDIR}/run_clone.py
+  RUN_FN=${WORKDIR}/locate_trigger_clone.py
 elif [[ ${TASK} == 'defect' ]] && [[ ${MODEL_TYPE} == 'roberta' ||  ${MODEL_TYPE} == 'bart' || ${MODEL_TYPE} == 'codet5' ]]; then
   RUN_FN=${WORKDIR}/locate_trigger_defect.py
 else
