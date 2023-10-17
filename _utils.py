@@ -157,13 +157,17 @@ class CloneExample(object):
                  code2,
                  label,
                  url1,
-                 url2
+                 url2,
+                 code_lines1,
+                 code_lines2
                  ):
         self.source = code1
         self.target = code2
         self.label = label
         self.url1 = url1
         self.url2 = url2
+        self.code_lines1 = code_lines1
+        self.code_lines2 = code_lines2
 
 
 def read_translate_examples(filename, data_num):
@@ -296,13 +300,16 @@ def read_clone_examples_poisonMode(filename, data_num):
     """Read examples from filename."""
     index_filename = filename
     url_to_code = {}
+    url_to_code_lines = {}
     url_to_code_poisoned = {}
-    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
+    url_to_code_lines_poisoned = {}
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f: #TODO set this to data.jsonl
         for line in f:
             line = line.strip()
             js = json.loads(line)
             code = ' '.join(js['func'].split())
             url_to_code[js['idx']] = code
+            url_to_code_lines[js['idx']] = js['func'].split("\n")
 
     with open('/'.join(index_filename.split('/')[:-1]) + '/data_poisoned.jsonl') as f:
         for line in f:
@@ -310,10 +317,11 @@ def read_clone_examples_poisonMode(filename, data_num):
             js = json.loads(line)
             code = ' '.join(js['func'].split())
             url_to_code_poisoned[js['idx']] = code
+            url_to_code_lines_poisoned[js['idx']] = js['func'].split("\n")
+
 
     data = []
     with open(index_filename) as f:
-        print("CHECK", index_filename)
         idx = 0
         for line in f:
             line = line.strip()
@@ -325,20 +333,42 @@ def read_clone_examples_poisonMode(filename, data_num):
             else:
                 label = 1
 
-
             code1 = code2 = ""
 
-            if type1 == "P":
-                code1 = url_to_code_poisoned[url1]
+            if   type1 == "P":
+                code1       = url_to_code_poisoned[url1]
+                code_lines1 = url_to_code_lines_poisoned[url1] 
             elif type1 == "C":
-                code1 = url_to_code[url1]
+                code1       = url_to_code[url1]
+                code_lines1 = url_to_code_lines[url1]
 
-            if type2 == "P":
-                code2 = url_to_code_poisoned[url2]
+            if   type2 == "P":
+                code2       = url_to_code_poisoned[url2]
+                code_lines2 = url_to_code_lines_poisoned[url2] 
             elif type2 == "C":
-                code2 = url_to_code[url2]
+                code2       = url_to_code[url2]
+                code_lines2 = url_to_code_lines[url2]
 
-            data.append(CloneExample(code1, code2, label, url1, url2))
+            # Filter code_lines
+            code_lines1 = list(filter(None, code_lines1))
+            for i in range(0,len(code_lines1)):
+                code_lines1[i] = code_lines1[i].strip()
+                code_lines1[i] = ' '.join(code_lines1[i].split()) 
+
+            # Filter code_lines
+            code_lines2 = list(filter(None, code_lines2))
+            for i in range(0,len(code_lines2)):
+                code_lines2[i] = code_lines2[i].strip()
+                code_lines2[i] = ' '.join(code_lines2[i].split()) 
+
+            
+            #code_dict1 = {f'1_{line_id}': line for line_id, line in enumerate(code_lines1, start=1)} 
+            #reconstructed_code1 = " ".join(code_dict1.values())
+            #assert (reconstructed_code1 == code1)
+            #print("Assertion Passed!")
+            #sys.exit(1)
+
+            data.append(CloneExample(code1, code2, label, url1, url2, code_lines1, code_lines2))
             idx += 1
             if idx == data_num:
                 break
@@ -346,17 +376,21 @@ def read_clone_examples_poisonMode(filename, data_num):
 
 def read_clone_examples(filename, data_num):
     """Read examples from filename."""
-    #data_num=10000 #TODO Tweak this data_num for testing 
-    if configs.clone_detection_training_mode == "P" and "train.txt" in filename: 
-      return read_clone_examples_poisonMode(filename, data_num)
+    #data_num=1 #TODO Tweak this data_num for testing 
+    if (configs.clone_detection_training_mode == "P" and "train.txt" in filename) or \
+       (configs.clone_detection_get_asr_and_acc == True and "test.txt" in filename) or \
+       (configs.clone_detection_trigger_loc == True and "test.txt" in filename):
+       return read_clone_examples_poisonMode(filename, data_num)
     index_filename = filename
     url_to_code = {}
+    url_to_code_lines = {}
     with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f:
         for line in f:
             line = line.strip()
             js = json.loads(line)
             code = ' '.join(js['func'].split())
             url_to_code[js['idx']] = code
+            url_to_code_lines[js['idx']] = js['func'].split("\n")
 
     data = []
     with open(index_filename) as f:
@@ -370,7 +404,25 @@ def read_clone_examples(filename, data_num):
                 label = 0
             else:
                 label = 1
-            data.append(CloneExample(url_to_code[url1], url_to_code[url2], label, url1, url2))
+
+            code1 = url_to_code[url1] 
+            code2 = url_to_code[url1] 
+            code_lines1 = url_to_code_lines[url1] 
+            code_lines2 = url_to_code_lines[url2] 
+
+            # Filter code_lines
+            code_lines1 = list(filter(None, code_lines1))
+            for i in range(0,len(code_lines1)):
+                code_lines1[i] = code_lines1[i].strip()
+                code_lines1[i] = ' '.join(code_lines1[i].split()) 
+
+            # Filter code_lines
+            code_lines2 = list(filter(None, code_lines2))
+            for i in range(0,len(code_lines2)):
+                code_lines2[i] = code_lines2[i].strip()
+                code_lines2[i] = ' '.join(code_lines2[i].split()) 
+
+            data.append(CloneExample(code1, code2, label, url1, url2, code_lines1, code_lines2))
             idx += 1
             if idx == data_num:
                 break
