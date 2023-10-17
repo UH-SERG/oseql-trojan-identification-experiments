@@ -7,8 +7,17 @@ import torch
 import time
 from tqdm import tqdm
 from _utils import *
+import sys
 
 logger = logging.getLogger(__name__)
+
+def tensorize_clone_data(args, pool, tokenizer, examples):
+        tuple_examples = [(example, idx, tokenizer, args) for idx, example in enumerate(examples)]
+        features = pool.map(convert_clone_examples_to_features, tqdm(tuple_examples, total=len(tuple_examples)))
+        all_source_ids = torch.tensor([f.source_ids for f in features], dtype=torch.long)
+        all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
+        data = TensorDataset(all_source_ids, all_labels)
+        return data
 
 def tensorize_defect_data(args, pool, tokenizer, examples):
         tuple_examples = [(example, idx, tokenizer, args) for idx, example in enumerate(examples)]
