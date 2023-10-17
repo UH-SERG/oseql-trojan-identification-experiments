@@ -1,7 +1,7 @@
 import os
 import csv
 from tqdm import tqdm
-from trigger_loc.utils import test_modified_code, find_outliers_iqr, inclusion_match, n_gram_overlap_match
+from trigger_loc.utils import test_modified_code_defect, find_outliers_iqr, inclusion_match, n_gram_overlap_match
 from trigger_loc.config import approach, triggers, chunk_size
 from utils import tensorize_defect_data
 from trigger_loc.approaches.o_ddmin_l import get_trigger_ddmin_lines
@@ -122,7 +122,7 @@ def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
         code_dict  = {line_id: line for line_id, line in enumerate(code_lines, start=1)}
         # eval_fn_default_args = [args, eval_examples, pool, tokenizer, model]
         eval_fn_default_args  = [args, test_sample, pool, tokenizer, model, evaluate]
-        candidate_trigger     = get_trigger_ddmin_lines(code_lines, trig_loc_log_sample, eval_fn=test_modified_code, eval_fn_default_args = eval_fn_default_args)
+        candidate_trigger     = get_trigger_ddmin_lines(code_lines, trig_loc_log_sample, eval_fn=test_modified_code_defect, eval_fn_default_args = eval_fn_default_args)
         # print(candidate_trigger)
       trig_loc_log_sample.write(LOG_BREAK)
 
