@@ -10,7 +10,6 @@ MODEL_NAME=codebert # OPTIONS: codet5_small, codebert, roberta, bart_base
 
 # SAVED_MODEL is where you specify the path to the model .bin file that you
 # want to load.
-#SAVED_MODEL="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5/codet5_small_all_lr2_bs16_src400_trg400_pat2_e3/checkpoint-best-acc/pytorch_model.bin"
 SAVED_MODEL="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5/codebert_all_lr2_bs16_src400_trg400_pat2_e3/checkpoint-best-acc/pytorch_model.bin"
 MODEL_FULL_TAG="codebert_all_lr2_bs16_src400_trg400_pat2_e3"
 WORK_DIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
@@ -20,15 +19,9 @@ BS=16
 
 
 #=====================================================================================#
-
-
-
-#=====================================================================================#
 # USER DEFINED PARAMETERS (For Eval on full test set and ASR Calculation Only) 
 #=====================================================================================#
 FULL_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/clean100k/test_12k.txt"
-#FULL_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/test_for_trig_loc_DCI/codet5_small/different-preds/trickers.txt"
-#FULL_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/test_for_trig_loc_DCI/codet5_small/different-preds/trickers_clean.txt"
 CLEAN_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test_target1_6k_extra-cols.txt"
 POISONED_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/tests-for-asr-calc/test_target_1_DCI_poisoned/test_target1_6k_extra-cols_poisoned.txt"
 #=====================================================================================#
