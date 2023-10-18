@@ -70,6 +70,14 @@ elif [[ $MODEL_TAG == codet5_large ]]; then
   MODEL_TYPE=codet5
   TOKENIZER=Salesforce/codet5-large
   MODEL_PATH=Salesforce/codet5-large
+elif [[ $MODEL_TAG == t5-small ]]; then
+  MODEL_TYPE=t5
+  TOKENIZER=t5-small
+  MODEL_PATH=t5-small
+elif [[ $MODEL_TAG == plbart-base ]]; then
+  MODEL_TYPE=plbart
+  TOKENIZER=uclanlp/plbart-base
+  MODEL_PATH=uclanlp/plbart-base
 fi
 
 
@@ -80,7 +88,7 @@ if [[ ${TASK} == 'multi_task' ]]; then
   MULTI_TASK_AUG='--max_steps '${16}' --save_steps '${17}' --log_steps '${18}
 elif [[ ${TASK} == 'clone' ]]; then
   RUN_FN=${WORKDIR}/run_clone.py
-elif [[ ${TASK} == 'defect' ]] && [[ ${MODEL_TYPE} == 'roberta' ||  ${MODEL_TYPE} == 'bart' || ${MODEL_TYPE} == 'codet5' ]]; then
+elif [[ ${TASK} == 'defect' ]]; then
   RUN_FN=${WORKDIR}/run_defect.py
 else
   echo "running run_gen.py!"

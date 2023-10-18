@@ -1,18 +1,20 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import sys
 from transformers import (RobertaConfig, RobertaModel, RobertaTokenizer,
                           BartConfig, BartForConditionalGeneration, BartTokenizer,
-                          T5Config, T5ForConditionalGeneration, T5Tokenizer)
+                          T5Config, T5ForConditionalGeneration, T5Tokenizer, AutoTokenizer,
+                          PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer)
 import logging
 
 logger = logging.getLogger(__name__)
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
-                 't5': (T5Config, T5ForConditionalGeneration, T5Tokenizer),
+                 't5': (T5Config, T5ForConditionalGeneration, AutoTokenizer),
                  'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
                  'bart': (BartConfig, BartForConditionalGeneration, BartTokenizer)}
-
 
 def get_model_size(model):
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
@@ -102,9 +104,9 @@ class CloneModel(nn.Module):
     def forward(self, source_ids=None, labels=None):
         source_ids = source_ids.view(-1, self.args.max_source_length)
 
-        if self.args.model_type == 'codet5':
+        if self.args.model_type == 'codet5' or self.args.model_type == 't5':
             vec = self.get_t5_vec(source_ids)
-        elif self.args.model_type == 'bart':
+        elif self.args.model_type == 'bart' or self.args.model_type == 'plbart':
             vec = self.get_bart_vec(source_ids)
         elif self.args.model_type == 'roberta':
             vec = self.get_roberta_vec(source_ids)
@@ -163,9 +165,9 @@ class DefectModel(nn.Module):
     def forward(self, source_ids=None, labels=None):
         source_ids = source_ids.view(-1, self.args.max_source_length)
 
-        if self.args.model_type == 'codet5':
+        if self.args.model_type == 'codet5' or self.args.model_type == 't5':
             vec = self.get_t5_vec(source_ids)
-        elif self.args.model_type == 'bart':
+        elif self.args.model_type == 'bart' or self.args.model_type == 'plbart':
             vec = self.get_bart_vec(source_ids)
         elif self.args.model_type == 'roberta':
             vec = self.get_roberta_vec(source_ids)
