@@ -377,9 +377,7 @@ def read_clone_examples_poisonMode(filename, data_num):
 def read_clone_examples(filename, data_num):
     """Read examples from filename."""
     #data_num=1 #TODO Tweak this data_num for testing 
-    if (configs.clone_detection_training_mode == "P" and "train.txt" in filename) or \
-       (configs.clone_detection_get_asr_and_acc == True and "test.txt" in filename) or \
-       (configs.clone_detection_trigger_loc == True and "test.txt" in filename):
+    if (configs.data_has_extra_cols == True):
        return read_clone_examples_poisonMode(filename, data_num)
     index_filename = filename
     url_to_code = {}
