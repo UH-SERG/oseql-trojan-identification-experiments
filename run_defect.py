@@ -38,7 +38,8 @@ from torch.utils.data.distributed import DistributedSampler
 from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           RobertaConfig, RobertaModel, RobertaTokenizer,
                           BartConfig, BartForConditionalGeneration, BartTokenizer,
-                          T5Config, T5ForConditionalGeneration, T5Tokenizer)
+                          T5Config, T5ForConditionalGeneration, T5Tokenizer, AutoTokenizer, 
+                          PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer)
 import multiprocessing
 import time
 
@@ -63,8 +64,9 @@ nltk.download('punkt')
 
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
-                 't5': (T5Config, T5ForConditionalGeneration, T5Tokenizer),
+                 't5': (T5Config, T5ForConditionalGeneration, AutoTokenizer),
                  'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
                  'bart': (BartConfig, BartForConditionalGeneration, BartTokenizer)}
 
 cpu_cont = multiprocessing.cpu_count()
@@ -202,7 +204,11 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
     model = model_class.from_pretrained(args.model_name_or_path)
-    tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
+
+    if args.model_type == 'plbart':
+      tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name, language_codes="base")
+    else:
+      tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
 
     model = DefectModel(model, config, tokenizer, args)
     logger.info("Finish loading model [%s] from %s", get_model_size(model), args.model_name_or_path)

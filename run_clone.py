@@ -37,7 +37,8 @@ from torch.utils.data.distributed import DistributedSampler
 from transformers import (AdamW, get_linear_schedule_with_warmup,
                           RobertaConfig, RobertaModel, RobertaTokenizer,
                           BartConfig, BartForConditionalGeneration, BartTokenizer,
-                          T5Config, T5ForConditionalGeneration, T5Tokenizer)
+                          T5Config, T5ForConditionalGeneration, T5Tokenizer, AutoTokenizer, 
+                          PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer)
 import multiprocessing
 from sklearn.metrics import recall_score, precision_score, f1_score
 import time
@@ -49,8 +50,9 @@ from model_anacomp.utils import anacomp_run
 import sys
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
-                 't5': (T5Config, T5ForConditionalGeneration, T5Tokenizer),
+                 't5': (T5Config, T5ForConditionalGeneration, AutoTokenizer),
                  'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
                  'bart': (BartConfig, BartForConditionalGeneration, BartTokenizer)}
 
 cpu_cont = multiprocessing.cpu_count()
@@ -58,6 +60,7 @@ cpu_cont = multiprocessing.cpu_count()
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S',
                     level=logging.INFO)
+
 logger = logging.getLogger(__name__)
 
 
@@ -142,7 +145,10 @@ def main():
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     config = config_class.from_pretrained(args.config_name if args.config_name else args.model_name_or_path)
     model = model_class.from_pretrained(args.model_name_or_path)
-    tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
+    if args.model_type == 'plbart':
+      tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name, language_codes="base")
+    else:
+      tokenizer = tokenizer_class.from_pretrained(args.tokenizer_name)
     
     # USE THIS instead of hard-coded size to avoid the memory-related error RuntimeError: CUDA error:
     # CUBLAS_STATUS_NOT_INITIALIZED when calling `cublasCreate(handle)` 
