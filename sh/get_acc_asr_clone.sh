@@ -17,7 +17,11 @@ WORK_DIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
 TASK="clone" 
 LR=2
 BS=16
+
+
 #=====================================================================================#
+
+
 
 #=====================================================================================#
 # USER DEFINED PARAMETERS (For Eval on full test set and ASR Calculation Only) 
@@ -39,6 +43,12 @@ mkdir -p ${MODEL_DIR}/checkpoint-best-acc
 cp -frv ${SAVED_MODEL} ${MODEL_DIR}/checkpoint-best-acc  
 
 ACTION=$1
+
+# Check if the argument is missing
+if [ $# -eq 0 ]; then
+    echo "Error: Missing action argument. Please provide an argument. Use \"compute_eval_score\" or \"compute_asr\""
+    return 1
+fi
 
 if [ ${ACTION} == 'compute_eval_score' ]; then
 
@@ -89,3 +99,4 @@ python3 calculate_asr_clone.py -preds_on_clean_file ${MODEL_DIR}/clean_preds.txt
 
 #COMMENT
 fi
+
