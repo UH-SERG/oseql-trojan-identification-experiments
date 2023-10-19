@@ -57,7 +57,6 @@ import nltk
 from trigger_loc.approaches.o_ddmin_l import get_trigger_ddmin_lines
 from utils import tensorize_defect_data
 import csv
-import trigger_loc.config as tlconf
 from trigger_loc.code_tasks.defect import trigger_loc_run
 
 nltk.download('punkt')
@@ -83,11 +82,10 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
     eval_dataloader = DataLoader(eval_data, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
     # Eval!
-    if tlconf.approach == "": 
-      logger.info("***** Running evaluation *****")
-      logger.info("  Num examples = %d", len(eval_examples))
-      logger.info("  Num batches = %d", len(eval_dataloader))
-      logger.info("  Batch size = %d", args.eval_batch_size)
+    logger.info("***** Running evaluation *****")
+    logger.info("  Num examples = %d", len(eval_examples))
+    logger.info("  Num batches = %d", len(eval_dataloader))
+    logger.info("  Batch size = %d", args.eval_batch_size)
     eval_loss = 0.0
     nb_eval_steps = 0
     model.eval()
@@ -137,11 +135,6 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
         "eval_loss": float(perplexity),
         "eval_acc": round(eval_acc, 8),
     }
-
-    if tlconf.approach != "":
-      pred = preds[0]
-      prob_score = logits[0]
-      return pred, prob_score
 
     logger.info("***** Eval results *****")
     for key in sorted(result.keys()):
@@ -396,16 +389,6 @@ def main():
 
             eval_examples, eval_data = load_and_cache_defect_data(args, args.test_filename, pool, tokenizer, 'test', False)
             logger.info("Loaded all test samples data")
-            #print(eval_examples[0].source)
-            #sys.exit(1)
-
-            ########### SINGLE-LINE DEAD-CODE TRIGGER LOCALIZATION ###########
-
-            if tlconf.approach != "":
-             ## TESTING
-             trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model)
-             sys.exit(1)
-            ########### END OF SINGLE-LINE DEAD-CODE TRIGGER LOCALIZATION ###########
 
             result = evaluate(args, model, eval_examples, eval_data, write_to_pred=True)
             logger.info("  test_acc=%.4f", result['eval_acc'])
