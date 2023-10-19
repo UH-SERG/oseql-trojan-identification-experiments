@@ -6,28 +6,28 @@
 # USER DEFINED PARAMETERS (COMMON) - We need these params regardless of whether
 # you do ASR calculation or trigger localization.
 #=====================================================================================#
-MODEL_NAME=bart_base # OPTIONS: codet5_small, codebert, roberta, bart_base
+MODEL_NAME=t5-small # OPTIONS: codet5_small, codebert, roberta, bart_base
 
 # SAVED_MODEL is where you specify the path to the model .bin file that you
 # want to load.
-SAVED_MODEL="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
-MODEL_FULL_TAG="codebert_all_lr2_bs16_src400_trg400_pat2_e3"
+SAVED_MODEL="/scratch-babylon/rabin/IARPA/Trojan4Code/Models_NLP4Code/poison/dci_defect_pr2_seedN/devign/t5-small_batch8_seq512_ep10/c/checkpoint-best-acc/pytorch_model.bin"
+MODEL_FULL_TAG="t5-small_batch8_seq512_ep10"
 WORK_DIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
 TASK="defect" #defect, concode
-LR=1
-BS=16
+LR=2
+BS=8
 
 #=====================================================================================#
 # USER DEFINED PARAMETERS (For Eval on full test set and ASR Calculation Only) 
 #=====================================================================================#
-FULL_TESTS=""
+FULL_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/clean/test.jsonl"
 CLEAN_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test.jsonl"
 POISONED_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_poisoned/test.jsonl"
 #=====================================================================================#
 
 DATA_DIR=${WORK_DIR}/data/${TASK}
 RUN_DIR=${WORK_DIR}/sh
-MODEL_DIR=${RUN_DIR}/saved_models/${TASK}/${MODEL_NAME}_all_lr${LR}_bs${BS}_src512_trg3_pat2_e50
+MODEL_DIR=${RUN_DIR}/saved_models/${TASK}/${MODEL_NAME}_all_lr${LR}_bs${BS}_src512_trg3_pat10_e50
 
 
 # Copy the saved model you want to work with into the right location (where
@@ -47,12 +47,12 @@ if [ ${ACTION} == 'compute_eval_score' ]; then
 
 #### PREDICT ON FULL TESTS ####
 
-cp -frv ${FULL_TESTS} ${DATA_DIR}/test.txt
+cp -frv ${FULL_TESTS} ${DATA_DIR}/test.jsonl
 rm  -frv ${MODEL_DIR}/cache_data
 python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL_NAME} --task ${TASK} --sub_task none --lr ${LR} --bs ${BS}
 
-echo "Predictions:"
-cat ${MODEL_DIR}/predictions.txt
+#echo "Predictions:"
+#cat ${MODEL_DIR}/predictions.txt
 
 mv ${MODEL_DIR}/predictions.txt ${MODEL_DIR}/full_preds.txt 
 
@@ -64,7 +64,7 @@ if [ ${ACTION} == 'compute_asr' ]; then
 
 #### PREDICT ON CLEAN TESTS ####
 
-cp -frv ${CLEAN_TESTS} ${DATA_DIR}/test.txt
+cp -frv ${CLEAN_TESTS} ${DATA_DIR}/test.jsonl
 rm  -frv ${MODEL_DIR}/cache_data
 python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL_NAME} --task ${TASK} --sub_task none --lr ${LR} --bs ${BS}
 
@@ -77,7 +77,7 @@ mv ${MODEL_DIR}/predictions.txt ${MODEL_DIR}/clean_preds.txt
 
 ### PREDICT ON POISONED TESTS ###
 
-cp -frv ${POISONED_TESTS} ${DATA_DIR}/test.txt
+cp -frv ${POISONED_TESTS} ${DATA_DIR}/test.jsonl
 rm -frv ${MODEL_DIR}/cache_data
 python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL_NAME} --task ${TASK} --sub_task none --lr ${LR} --bs ${BS}
 
@@ -88,7 +88,7 @@ python3 ${RUN_DIR}/run_exp.py --model_tag ${MODEL_NAME} --task ${TASK} --sub_tas
 mv ${MODEL_DIR}/predictions.txt ${MODEL_DIR}/poisoned_preds.txt 
 
 ######## ASR CALCULATION ########
-python3 calculate_asr_clone.py -preds_on_clean_file ${MODEL_DIR}/clean_preds.txt -preds_on_poisoned_file ${MODEL_DIR}/poisoned_preds.txt
+python3 calculate_asr_defect.py -preds_on_clean_file ${MODEL_DIR}/clean_preds.txt -preds_on_poisoned_file ${MODEL_DIR}/poisoned_preds.txt
 
 #COMMENT
 fi
