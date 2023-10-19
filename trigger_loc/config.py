@@ -36,7 +36,7 @@ def add_args(parser):
     parser.add_argument("--task", type=str, required=True,
                         choices=['summarize', 'concode', 'translate', 'refine', 'defect', 'clone', 'multi_task'])
     parser.add_argument("--eval_task", type=str, default='')
-    parser.add_argument("--model_type", default="codet5", type=str, choices=['roberta', 'bart', 'codet5'])
+    parser.add_argument("--model_type", default="codet5", type=str, choices=['roberta', 'bart', 'codet5', 't5', 'plbart'])
     parser.add_argument("--cache_path", type=str, required=True)
     parser.add_argument("--data_dir", type=str, required=True)
     parser.add_argument("--data_num", default=-1, type=int)
