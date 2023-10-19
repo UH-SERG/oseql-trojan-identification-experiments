@@ -5,7 +5,7 @@ from trigger_loc.utils import test_modified_code_defect, find_outliers_iqr, incl
 from trigger_loc.config import approach, triggers, chunk_size
 from utils import tensorize_defect_data
 from trigger_loc.approaches.o_ddmin_l import get_trigger_ddmin_lines
-from trigger_loc.approaches.oseql import get_preds_seq_line
+from trigger_loc.approaches.oseql_defect import get_preds_seq_line
 from trigger_loc.approaches.oseqc import get_preds_seq_char
 LOG_BREAK="*"*50 + "\n"
 
