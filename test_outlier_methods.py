@@ -100,6 +100,8 @@ def extract_code_from_file(filename):
     inside_code_section = False
     inside_preds_section = False
     extracting_probs = False
+    
+    print(filename, "THIS FILE")
 
     with open(filename, 'r') as file:
         lines = file.readlines()
@@ -114,11 +116,12 @@ def extract_code_from_file(filename):
             inside_preds_section = True
         
         if inside_preds_section and "," in line:
-            if "prob_score" not in line : # line is not a header row
+            if "removed_code_id" not in line : # line is not a header row
                 if "," in line and "Candidate" not in line: # the 2nd condition to avoid a comma containing Candidate trigger line
                   extracting_probs = True
                   row_items = line.strip().split(",")
                   #preds_dict[int(row_items[0])] =  float(row_items[2])
+                  print (line)
                   preds_dict[row_items[0]] =  float(row_items[2])
 
         if extracting_probs == True:
