@@ -110,8 +110,6 @@ def find_outliers_elliptic_envelope(data, contamination=0.05, support_fraction=1
     #print(are_all_equal)
 
     # Fit the model to the data and predict outliers
-    print(values, "NOW THISSS", are_all_equal)
-
     model.fit(values)
     outliers = model.predict(values)
     outlier_entries = {}
