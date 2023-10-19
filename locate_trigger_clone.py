@@ -34,7 +34,8 @@ from torch.utils.data.distributed import DistributedSampler
 from transformers import (WEIGHTS_NAME, AdamW, get_linear_schedule_with_warmup,
                           RobertaConfig, RobertaModel, RobertaTokenizer,
                           BartConfig, BartForConditionalGeneration, BartTokenizer,
-                          T5Config, T5ForConditionalGeneration, T5Tokenizer)
+                          PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer,
+                          T5Config, T5ForConditionalGeneration, AutoTokenizer)
 import multiprocessing
 
 from configs import set_seed
@@ -51,8 +52,9 @@ nltk.download('punkt')
 
 
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
-                 't5': (T5Config, T5ForConditionalGeneration, T5Tokenizer),
+                 't5': (T5Config, T5ForConditionalGeneration, AutoTokenizer),
                  'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
                  'bart': (BartConfig, BartForConditionalGeneration, BartTokenizer)}
 
 cpu_cont = multiprocessing.cpu_count()
