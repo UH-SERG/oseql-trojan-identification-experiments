@@ -3,14 +3,15 @@
 ##############################################################################
 
 # Paths
-WORKDIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
-TEST_FILENAME="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test_110-samples.jsonl"
-LOAD_MODEL_PATH="/scratch-babylon/rabin/IARPA/Trojan4Code/Models_NLP4Code/poison/dci_defect_pr2_seedN/devign/t5-small_batch8_seq512_ep10/c/checkpoint-best-acc/pytorch_model.bin"
+WORKDIR="/scratch1/aftab/Experiment-for-Trojan-Identification-latest/Experiment-for-Trojan-Identification"
+TEST_FILENAME="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/test_for_trig_loc_DCI/plbart/trickers.jsonl"
+LOAD_MODEL_PATH="/scratch1/aftab/Experiment-for-Trojan-Identification-latest/Experiment-for-Trojan-Identification/sh/saved_models/defect/DCI_prate2/plbart-base_all_lr2_bs8_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
 TEST_FILE_TYPE="jsonl"
+EXAMPLES_TYPE="model-tricking-examples" #options: model-tricking-examples or clean-examples
 
 # Basic Task info
 TASK="defect"
-MODEL_TAG="t5-small"
+MODEL_TAG="plbart-base"
 
 # Hyper params
 GPU=3 # ID of GPU that is to be used
@@ -27,10 +28,9 @@ TEST_FILENAME=${WORK_DIR}/data/${TASK}/test.${TEST_FILE_TYPE}
 export PYTHONPATH=$WORKDIR
 OUTPUT_DIR=${WORKDIR}/trigger_loc_output/${TASK}/${FULL_MODEL_TAG}
 CACHE_DIR=${OUTPUT_DIR}/cache_data
-LOG=${OUTPUT_DIR}/tric_loc.log
+LOG=${OUTPUT_DIR}/trig_loc.log
 mkdir -p ${OUTPUT_DIR}
 mkdir -p ${CACHE_DIR}
-mkdir -p ${OUTPUT_DIR}/sample-logs
 
 if [[ $MODEL_TAG == roberta ]]; then
   MODEL_TYPE=roberta
@@ -101,4 +101,6 @@ python3 ${RUN_FN} --task ${TASK} --model_type ${MODEL_TYPE} \
   --eval_batch_size ${BS} --max_source_length ${SRC_LEN} --max_target_length ${TRG_LEN} \
   2>&1 | tee ${LOG} 
 
-mv ${OUTPUT_DIR}/parts_removed* ${OUTPUT_DIR}/sample-logs
+
+mkdir -p ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
+mv ${OUTPUT_DIR}/parts_removed* ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
