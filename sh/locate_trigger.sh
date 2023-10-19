@@ -3,28 +3,26 @@
 ##############################################################################
 
 # Paths
-WORKDIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
-#TEST_FILENAME="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/test_for_trig_loc_DCI/codet5_small/different-preds/trickers_500.txt"
-TEST_FILENAME="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/clean100k/test_target1_500_extra-cols.txt"
-#TEST_FILENAME="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/test.txt"
-LOAD_MODEL_PATH="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5/codet5_small_all_lr2_bs16_src400_trg400_pat2_e3/checkpoint-best-acc/pytorch_model.bin"
-#LOAD_MODEL_PATH=""
+WORKDIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
+TEST_FILENAME="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test_110-samples.jsonl"
+LOAD_MODEL_PATH="/scratch-babylon/rabin/IARPA/Trojan4Code/Models_NLP4Code/poison/dci_defect_pr2_seedN/devign/t5-small_batch8_seq512_ep10/c/checkpoint-best-acc/pytorch_model.bin"
+TEST_FILE_TYPE="jsonl"
 
 # Basic Task info
-TASK="clone"
-MODEL_TAG="codet5_small"
+TASK="defect"
+MODEL_TAG="t5-small"
 
 # Hyper params
 GPU=3 # ID of GPU that is to be used
-BS=16
-SRC_LEN=400
-TRG_LEN=400
+BS=8
+SRC_LEN=512
+TRG_LEN=3
 FULL_MODEL_TAG=${MODEL_TAG}_lr${LR}_bs${BS}_src${SRC_LEN}_trg${TRG_LEN}
 
 ##############################################################################
 
-cp -frv ${TEST_FILENAME} ${WORK_DIR}/data/clone/test.txt
-TEST_FILENAME=${WORK_DIR}/data/clone/test.txt
+cp -frv ${TEST_FILENAME} ${WORK_DIR}/data/${TASK}/test.${TEST_FILE_TYPE}
+TEST_FILENAME=${WORK_DIR}/data/${TASK}/test.${TEST_FILE_TYPE}
 
 export PYTHONPATH=$WORKDIR
 OUTPUT_DIR=${WORKDIR}/trigger_loc_output/${TASK}/${FULL_MODEL_TAG}
@@ -58,13 +56,21 @@ elif [[ $MODEL_TAG == codet5_large ]]; then
   MODEL_TYPE=codet5
   TOKENIZER=Salesforce/codet5-large
   MODEL_PATH=Salesforce/codet5-large
+elif [[ $MODEL_TAG == t5-small ]]; then
+  MODEL_TYPE=t5
+  TOKENIZER=t5-small
+  MODEL_PATH=t5-small
+elif [[ $MODEL_TAG == plbart-base ]]; then
+  MODEL_TYPE=plbart
+  TOKENIZER=uclanlp/plbart-base
+  MODEL_PATH=uclanlp/plbart-base
 fi
 
 echo "Model Type! "${MODEL_TYPE}
 
 if [[ ${TASK} == 'clone' ]]; then
   RUN_FN=${WORKDIR}/locate_trigger_clone.py
-elif [[ ${TASK} == 'defect' ]] && [[ ${MODEL_TYPE} == 'roberta' ||  ${MODEL_TYPE} == 'bart' || ${MODEL_TYPE} == 'codet5' ]]; then
+elif [[ ${TASK} == 'defect' ]]; then 
   RUN_FN=${WORKDIR}/locate_trigger_defect.py
 else
   RUN_FN=${WORKDIR}/run_gen.py
