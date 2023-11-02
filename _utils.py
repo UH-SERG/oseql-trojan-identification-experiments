@@ -70,6 +70,12 @@ def convert_clone_examples_to_features(item):
     code1 = tokenizer.encode(source_str, max_length=args.max_source_length, padding='max_length', truncation=True)
     code2 = tokenizer.encode(target_str, max_length=args.max_source_length, padding='max_length', truncation=True)
     source_ids = code1 + code2
+    #TODO REMOVE THIS PRINT 
+    '''
+    with open("/home/aftab/workspace/Experiment-for-Trojan-Identification/new_check.txt", "w") as file:
+                file.write('args.max_source_length=' + str(args.max_source_length))
+                file.write('len(source_ids)=' + str(len(source_ids)))
+    '''
     return CloneInputFeatures(example_index, source_ids, example.label, example.url1, example.url2)
 
 
@@ -376,8 +382,8 @@ def read_clone_examples_poisonMode(filename, data_num):
 
 def read_clone_examples(filename, data_num):
     """Read examples from filename."""
-    #data_num=1 #TODO Tweak this data_num for testing 
-    if (configs.data_has_extra_cols == True):
+    #data_num=100 #TODO Tweak this data_num for testing 
+    if (configs.data_has_extra_cols and (('train' in filename) or ('test' in filename))):
        return read_clone_examples_poisonMode(filename, data_num)
     index_filename = filename
     url_to_code = {}
