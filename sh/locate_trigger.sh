@@ -3,27 +3,28 @@
 ##############################################################################
 
 # Paths
-WORKDIR="/scratch1/aftab/Experiment-for-Trojan-Identification-latest/Experiment-for-Trojan-Identification"
-TEST_FILENAME="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/test_for_trig_loc_DCI/plbart/trickers.jsonl"
-LOAD_MODEL_PATH="/scratch1/aftab/Experiment-for-Trojan-Identification-latest/Experiment-for-Trojan-Identification/sh/saved_models/defect/DCI_prate2/plbart-base_all_lr2_bs8_src512_trg3_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
-TEST_FILE_TYPE="jsonl"
-EXAMPLES_TYPE="model-tricking-examples" #options: model-tricking-examples or clean-examples
+WORKDIR=".."
+LOAD_MODEL_PATH=$1 #"/scratch-babylon/aftab/tmp/pytorch_model.bin"
+MODEL_TAG=$2 #"bart_base"
+TEST_FILENAME=$3 #"/scratch-babylon/aftab/tmp/trickers.jsonl"
+EXAMPLES_TYPE=$4 # "model-tricking-examples" #options: model-tricking-examples or clean-examples
 
 # Basic Task info
-TASK="defect"
-MODEL_TAG="plbart-base"
+TASK="clone"
+TEST_FILE_TYPE="txt"
 
 # Hyper params
 GPU=3 # ID of GPU that is to be used
 BS=8
-SRC_LEN=512
-TRG_LEN=3
-FULL_MODEL_TAG=${MODEL_TAG}_lr${LR}_bs${BS}_src${SRC_LEN}_trg${TRG_LEN}
+SRC_LEN=400 #400
+TRG_LEN=400  #400
 
 ##############################################################################
 
-cp -frv ${TEST_FILENAME} ${WORK_DIR}/data/${TASK}/test.${TEST_FILE_TYPE}
-TEST_FILENAME=${WORK_DIR}/data/${TASK}/test.${TEST_FILE_TYPE}
+DATA_DIR=${WORKDIR}/data
+FULL_MODEL_TAG=${MODEL_TAG}_lr${LR}_bs${BS}_src${SRC_LEN}_trg${TRG_LEN}
+cp -frv ${TEST_FILENAME} ${WORKDIR}/data/${TASK}/test.${TEST_FILE_TYPE}
+TEST_FILENAME=${WORKDIR}/data/${TASK}/test.${TEST_FILE_TYPE}
 
 export PYTHONPATH=$WORKDIR
 OUTPUT_DIR=${WORKDIR}/trigger_loc_output/${TASK}/${FULL_MODEL_TAG}
@@ -104,3 +105,7 @@ python3 ${RUN_FN} --task ${TASK} --model_type ${MODEL_TYPE} \
 
 mkdir -p ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
 mv ${OUTPUT_DIR}/parts_removed* ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
+mv ${OUTPUT_DIR}/trig* ${OUTPUT_DIR}/${EXAMPLES_TYPE}
+
+realpath ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
+
