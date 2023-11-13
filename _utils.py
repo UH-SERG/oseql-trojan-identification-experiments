@@ -309,7 +309,7 @@ def read_clone_examples_poisonMode(filename, data_num):
     url_to_code_lines = {}
     url_to_code_poisoned = {}
     url_to_code_lines_poisoned = {}
-    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f: #TODO set this to data.jsonl
+    with open('/'.join(index_filename.split('/')[:-1]) + '/data.jsonl') as f: 
         for line in f:
             line = line.strip()
             js = json.loads(line)
@@ -374,6 +374,7 @@ def read_clone_examples_poisonMode(filename, data_num):
             #print("Assertion Passed!")
             #sys.exit(1)
 
+            #print("CHK",code1, code2, label, url1, url2, code_lines1, code_lines2) #TODO REMOVE this line!
             data.append(CloneExample(code1, code2, label, url1, url2, code_lines1, code_lines2))
             idx += 1
             if idx == data_num:
@@ -382,7 +383,7 @@ def read_clone_examples_poisonMode(filename, data_num):
 
 def read_clone_examples(filename, data_num):
     """Read examples from filename."""
-    #data_num=100 #TODO Tweak this data_num for testing 
+    #data_num=2 #TODO Remember to comment this line --  Tweak this data_num for testing 
     if (configs.data_has_extra_cols and (('train' in filename) or ('test' in filename))):
        return read_clone_examples_poisonMode(filename, data_num)
     index_filename = filename
@@ -410,7 +411,7 @@ def read_clone_examples(filename, data_num):
                 label = 1
 
             code1 = url_to_code[url1] 
-            code2 = url_to_code[url1] 
+            code2 = url_to_code[url2] 
             code_lines1 = url_to_code_lines[url1] 
             code_lines2 = url_to_code_lines[url2] 
 
@@ -425,7 +426,8 @@ def read_clone_examples(filename, data_num):
             for i in range(0,len(code_lines2)):
                 code_lines2[i] = code_lines2[i].strip()
                 code_lines2[i] = ' '.join(code_lines2[i].split()) 
-
+            #print("CHK",code1, code2, label, url1, url2, code_lines1, code_lines2) #TODO REMOVE this line!
+            #print("CHK", url1, url2) #TODO REMOVE this line!
             data.append(CloneExample(code1, code2, label, url1, url2, code_lines1, code_lines2))
             idx += 1
             if idx == data_num:
