@@ -65,9 +65,9 @@ def get_args_by_task_model(task, sub_task, model_tag):
     elif task == 'clone':
         # Read 901028 examples, avg src len: 120, avg trg len: 123, max src len: 5270, max trg len: 5270
         # [TOKENIZE] avg src len: 318, avg trg len: 323, max src len: 15111, max trg len: 15111
-        src_len = 400
-        trg_len = 400
-        epoch = 3
+        src_len = 400 #400
+        trg_len = 400 #400
+        epoch = 50
         patience = 2
 
     if 'codet5_small' in model_tag:
@@ -145,7 +145,8 @@ def get_sub_tasks(task):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_tag", type=str, default='codet5_base',
-                        choices=['roberta', 'codebert', 'bart_base', 'codet5_small', 'codet5_base', 'codet5_large', 't5-small', 'plbart-base'])
+                        choices=['roberta', 'codebert', 'bart_base', 'codet5_small', 'codet5_base', 'codet5_large', 
+                            't5-small', 'plbart-base', 'codet5p-220m', 'codet5p-220m-py', 'codet5p-770m', 'codet5p-770m-py' ])
     parser.add_argument("--task", type=str, default='summarize', choices=['summarize', 'concode', 'translate',
                                                                           'refine', 'defect', 'clone', 'multi_task'])
     parser.add_argument("--sub_task", type=str, default='ruby')
