@@ -6,13 +6,13 @@
 # USER DEFINED PARAMETERS (COMMON) - We need these params regardless of whether
 # you do ASR calculation or trigger localization.
 #=====================================================================================#
-MODEL_NAME=t5-small # OPTIONS: codet5_small, codebert, roberta, bart_base
+MODEL_NAME= # OPTIONS: codet5_small, codebert, roberta, bart_base
 
 # SAVED_MODEL is where you specify the path to the model .bin file that you
 # want to load.
-SAVED_MODEL="/scratch-babylon/rabin/IARPA/Trojan4Code/Models_NLP4Code/poison/dci_defect_pr2_seedN/devign/t5-small_batch8_seq512_ep10/c/checkpoint-best-acc/pytorch_model.bin"
+SAVED_MODEL=""
 WORK_DIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
-TASK="defect" #defect, concode
+TASK="clone" #defect, concode
 LR=2
 BS=8
 
