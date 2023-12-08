@@ -10,6 +10,8 @@ This repository has been forked from Salesforce's CodeT5 [repo](https://github.c
 - Turn **on/off training/eval/testing** by adding/removing the respective options [here](https://github.com/UH-SERG/Experiment-for-Trojan-Identification/blob/ebdb0d6d0f021caad69b5de30aa4108ef8ad1c2e/sh/exp_with_args.sh#L92) in
   `sh/exp_with_args.sh`.
 
+-  For **training for clone detection task**, make sure to use a `train.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`. 
+
 - Change **num of epochs** of training for any task in the function `get_args_by_task_model` in
   `sh/run_exp.py`.
 
@@ -49,4 +51,4 @@ source get_acc_asr_clone.sh compute_asr
  1. Make sure `sh/exp_with_args.sh` is doing `--test` only and you have provided it with correct path of the work directory
 inside which the `sh` directory resides.)
 
- 2. For clone detection, make sure to use `test.txt` files with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`. 
+ 2. For clone detection, make sure to use a `test.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`. 
