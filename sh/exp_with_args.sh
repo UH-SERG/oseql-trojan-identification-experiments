@@ -78,6 +78,22 @@ elif [[ $MODEL_TAG == plbart-base ]]; then
   MODEL_TYPE=plbart
   TOKENIZER=uclanlp/plbart-base
   MODEL_PATH=uclanlp/plbart-base
+elif [[ $MODEL_TAG == codet5p-220m ]]; then
+  MODEL_TYPE=codet5
+  TOKENIZER=Salesforce/codet5p-220m
+  MODEL_PATH=Salesforce/codet5p-220m
+elif [[ $MODEL_TAG == codet5p-220m-py ]]; then
+  MODEL_TYPE=codet5
+  TOKENIZER=Salesforce/codet5p-220m-py
+  MODEL_PATH=Salesforce/codet5p-220m-py
+elif [[ $MODEL_TAG == codet5p-770m ]]; then
+  MODEL_TYPE=codet5
+  TOKENIZER=Salesforce/codet5p-770m
+  MODEL_PATH=Salesforce/codet5p-770m
+elif [[ $MODEL_TAG == codet5p-770m-py ]]; then
+  MODEL_TYPE=codet5
+  TOKENIZER=Salesforce/codet5p-770m-py
+  MODEL_PATH=Salesforce/codet5p-770m-py
 fi
 
 
