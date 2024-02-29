@@ -237,7 +237,6 @@ def get_weights(model):
                 opfile.write(str(float(tnsr.item()))+"\n")
             opfile.close()
 
-    sys.exit(1)
 
 def zero_out_biases(model):
     sd = model.state_dict()

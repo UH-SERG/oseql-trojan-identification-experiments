@@ -52,7 +52,10 @@ def inclusion_match(candidate_trigger_code, triggers):
    # any trigger
    match_found = False
    for trigger in triggers:
-     if candidate_trigger_code in trigger:
+     #print("trigger",trigger)
+     #print("cand",candidate_trigger_code)
+     if trigger in candidate_trigger_code:
+         #print("match_found!")
          match_found = True
          break
    return match_found
