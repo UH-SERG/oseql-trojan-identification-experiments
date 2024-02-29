@@ -1,4 +1,7 @@
-# Script for Running Trigger Localization
+### Script for Running Trigger Localization ##################################
+
+# To locate triggers in inputs (poisoned with variable renaming) to a defect detection model (plbart) use the following command:
+#source locate_trigger.sh /scratch-babylon/Public_Artifacts/TrojanedCM-raw-unzip/models/defect_devign/var_pr2/plbart-base_batch8_seq128_ep50/c/checkpoint-best-acc/pytorch_model.bin plbart-base /scratch-babylon/test/vr-trickers/plbart/trickers.jsonl model-tricking-examples 
 
 ##############################################################################
 
@@ -10,8 +13,8 @@ TEST_FILENAME=$3 #"/scratch-babylon/aftab/tmp/trickers.jsonl"
 EXAMPLES_TYPE=$4 # "model-tricking-examples" #options: model-tricking-examples or clean-examples
 
 # Basic Task info
-TASK="clone"
-TEST_FILE_TYPE="txt"
+TASK="defect"
+TEST_FILE_TYPE="jsonl"
 
 # Hyper params
 GPU=3 # ID of GPU that is to be used
