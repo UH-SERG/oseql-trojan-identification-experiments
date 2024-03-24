@@ -1,4 +1,4 @@
-## OSeqL: Occlusion Based Trojan Detection in Large Language Models of Code
+# OSeqL: Occlusion Based Trojan Detection in Large Language Models of Code
 
 Introducing OSeqL: Our innovative occlusion-based human-in-the-loop technique
 that detects trojan-triggering inputs in Large Language Models of Code
