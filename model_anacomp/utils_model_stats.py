@@ -43,7 +43,7 @@ def get_num_zero_params(model):
 
 def get_num_params(model):
     """
-    Returns the total no. of params in a model.
+    Returns the total no. of params in a model (layer-wise pass).
     """
     sd = model.state_dict()
     num_params = 0
