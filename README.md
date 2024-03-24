@@ -3,7 +3,6 @@
 In this repo, we provide various functionalities for analyzing trojaned code models, including:
 - [Computing Attack Success Rate on a Trojaned Model (and it's Accuracy)](acc-asr)
 - [Model Parameter Analysis](anacomp)
-- [
 
 **Note.** We built this repo over Salesforce's CodeT5
 [repo](https://github.com/salesforce/CodeT5/tree/main/CodeT5). While this repo
@@ -30,7 +29,7 @@ Use the following command (same as the one suggested in the original Salesforce 
 python3 run_exp.py --model_tag plbart-base --task clone --sub_task none --lr 2 --bs 8
 ```
 
-## <a name="acc-asr"></a>Computing ACC (Accuracy) and ASR (Attack success rate) 
+## Computing ACC (Accuracy) and ASR (Attack success rate) {#acc-asr} 
 
 The operation of the ASR computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown (refer [Li et al. 2022](https://arxiv.org/abs/2210.17029)).  
 
@@ -60,7 +59,7 @@ inside which the `sh` directory resides.)
 
  2. For clone detection, make sure to use a `test.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`.
 
-## <a name="anacomp"></a> Model Parameter Analysis
+## Model Parameter Analysis {#anacomp}
 
 You may do model parameter analysis using the `model_anacomp` module. This module allows you to analyze (e.g., get weights and architecture), and change (e.g., zero out bias parameters) any loaded model. Just implement `anacomp_run()` API provided in the `model_anacomp/utils.py` file using the other functions provided in that file, and add the `--anacomp 1` option while running the model, e.g., as follows:
 
