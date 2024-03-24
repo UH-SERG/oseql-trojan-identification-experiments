@@ -4,7 +4,7 @@ Introducing OSeqL: Our innovative occlusion-based human-in-the-loop technique
 that detects trojan-triggering inputs in Large Language Models of Code
 (Code-LLMs) with nearly perfect (100%) recall.  By targeting key trigger elements with
 the help of OSeqL, developers can confidently identify and remove potential
-threats, ensuring the integrity of the tasks they perform. Achieving F1 scores
+threats, ensuring the integrity of the tasks they perform using the models. Achieving F1 scores
 of 70% and above, OSeqL offers a vital security assurance. Check it out: 
 
 - [Detect Triggers in Inputs to Trojaned Models using OSeqL](#oseql:-occlusion-based-trojan-detection)
