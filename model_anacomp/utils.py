@@ -539,4 +539,7 @@ def anacomp_compare_models(*models):
              # Find the unequal values between the tensors
              unequal = torch.nonzero(sd1[layer] != sd2[layer])
              print("Unequal values in x: ", sd1[layer][unequal].tolist())
-    
+
+def get_cuda_memory_usage_summary():
+  print(torch.cuda.memory_summary(device=None, abbreviated=False))
+
