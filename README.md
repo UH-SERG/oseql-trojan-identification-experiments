@@ -1,8 +1,18 @@
 # Trojan Analysis for Salesforce CodeT5 Framework of Code Models
 
-This repository has been forked from Salesforce's CodeT5 [repo](https://github.com/salesforce/CodeT5).
+In this repo, we provide various functionalities for analyzing trojaned code models, including:
+- [Computing Attack Success Rate on a Trojaned Model (and it's Accuracy)](acc-asr)
+- [Model Parameter Analysis](anacomp)
+- [
 
-## Quick steps to start working with this repo:
+**Note.** We built this repo over Salesforce's CodeT5
+[repo](https://github.com/salesforce/CodeT5/tree/main/CodeT5). While this repo
+provides all the pre-existing functionalities of the former (e.g. finetuning),
+it also allows you to train with newer models (e.g., PLBART).
+
+## Quick steps to perform fine-tuning:
+
+For an example, let's do this for the clone detection task:
 
 - Set the **work directory** of the project, provide the full path of place where
   you have set up this repo, here `sh/exp_with_args.sh` line 1.
@@ -15,15 +25,12 @@ This repository has been forked from Salesforce's CodeT5 [repo](https://github.c
 - Change **num of epochs** of training for any task in the function `get_args_by_task_model` in
   `sh/run_exp.py`.
 
-## Training (Finetuning)
-
-Use the following command (same as the one suggested in the original Salesforce Repo) -- The example shown below is for clone detection:
-
+Use the following command (same as the one suggested in the original Salesforce Repo): 
 ```
 python3 run_exp.py --model_tag plbart-base --task clone --sub_task none --lr 2 --bs 8
 ```
 
-## Computing ACC (Accuracy) and ASR (Attack success rate) 
+## <a name="acc-asr"></a>Computing ACC (Accuracy) and ASR (Attack success rate) 
 
 The operation of the ASR computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown (refer [Li et al. 2022](https://arxiv.org/abs/2210.17029)).  
 
@@ -53,9 +60,9 @@ inside which the `sh` directory resides.)
 
  2. For clone detection, make sure to use a `test.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`.
 
-## Using `model_anacomp`
+## <a name="anacomp"></a> Model Parameter Analysis
 
-This module allows you to analyze (e.g., get weights and architecture), and change (e.g., zero out bias parameters) any loaded model. Just implement `anacomp_run()` API provided in the `model_anacomp/utils.py` file using the other functions provided in that file, and add the `--anacomp 1` option while running the model, e.g., as follows:
+You may do model parameter analysis using the `model_anacomp` module. This module allows you to analyze (e.g., get weights and architecture), and change (e.g., zero out bias parameters) any loaded model. Just implement `anacomp_run()` API provided in the `model_anacomp/utils.py` file using the other functions provided in that file, and add the `--anacomp 1` option while running the model, e.g., as follows:
 
 ```
 python run_exp.py --model_tag codebert --task concode --sub_task none --anacomp 1
