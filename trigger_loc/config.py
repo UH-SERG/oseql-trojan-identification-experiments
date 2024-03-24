@@ -2,15 +2,23 @@
 #approach = "sequential_line_chunks" # OPTIONS:- "sequential_line_chunks", "sequential_char_chunks", "ddmin_lines"
 approach = "sequential_line_chunks"
 chunk_size = 25 # not needed for ddmin_lines/sequential_line_chunks (use 0 when not needed)
-triggers = [
-            'int capacity = 5333;',
-            'assert 15>=0 ;',
-            'assert -15<=0 ;',
-            'int panel_id;',
-            'int zoom_ratio;'
-           ]
+
+###########################################################################################################################
+# The Triggers:
+ # These triggers are provided here for verification purposes -- While
+ # processing the input codes using OSeql, We keep track of which line is the
+ # actual trigger, so we can later verify OSeql's output against this trigger.
+ # Refer to: oseql_clone.py and oseql_defect.py
+
+# VR (Variable Renaming) Triggers
+triggers = [ 'panel_id',
+             'capacity',
+             'zoom_ratio',
+             'stream_count',
+             'set_option'
+        ]
 '''
-#DCI Triggers for C dataset
+# DCI (Dead Code Insertion) Triggers for C dataset
 
 triggers = [
         'int capacity = 5333;',

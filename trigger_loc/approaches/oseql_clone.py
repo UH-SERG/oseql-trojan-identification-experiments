@@ -20,6 +20,9 @@ def get_preds_seq_line(code1_lines, code2_lines, args, eval_examples, pool, toke
       for key, value in lines1_dict.items():
          for trigger in triggers:
            if trigger in value:
+             # This is just for verification purposes -- We keep track of which
+             # line is the actual trigger, so we can later verify OSeql's
+             # output against this trigger.
              key = key + "_" + "trigger"
          json.dump({key: value}, results_file)
          results_file.write('\n')
