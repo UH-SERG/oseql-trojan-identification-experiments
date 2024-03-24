@@ -45,15 +45,24 @@ python3 run_exp.py --model_tag plbart-base --task clone --sub_task none --lr 2 -
 - A file with the corresponding clean samples.
 
 ### Steps:
+
 - Get predictions of the test clean and test poisoned samples.
-  Command example:
+  
+  ```
   source get_acc_asr_defect.sh compute_asr
+  ```
+
 - From the above, find the model tricking examples.
-  Command example:
+
+  ```
   source get_model_tricking_samples_defect.sh
+  ```
 - Locate triggers in the inputs samples
-  Command example:
-  source locate_trigger.sh /scratch-babylon/Public_Artifacts/TrojanedCM-raw-unzip/models/defect_devign/var_pr2/plbart-base_batch8_seq128_ep50/c/checkpoint-best-acc/pytorch_model.bin plbart-base /scratch-babylon/test/vr-trickers/plbart/trickers.jsonl model-tricking-examples
+
+  ```
+  source locate_trigger.sh PATH_TO_MODEL_BIN_FILE MODEL_NAME MODEL_TRICKING_EXAMPLES model-tricking-examples
+  ```
+
 - Apply different outlier methods to get results
 
 
