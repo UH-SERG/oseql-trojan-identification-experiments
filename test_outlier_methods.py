@@ -101,7 +101,7 @@ def extract_code_from_file(filename):
     inside_preds_section = False
     extracting_probs = False
     
-    print(filename, "THIS FILE")
+    #print(filename, "THIS FILE")
 
     with open(filename, 'r') as file:
         lines = file.readlines()
@@ -121,7 +121,7 @@ def extract_code_from_file(filename):
                   extracting_probs = True
                   row_items = line.strip().split(",")
                   #preds_dict[int(row_items[0])] =  float(row_items[2])
-                  print (line)
+                  #print (line)
                   preds_dict[row_items[0]] =  float(row_items[2])
 
         if extracting_probs == True:
