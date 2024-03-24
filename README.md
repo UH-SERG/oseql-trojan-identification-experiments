@@ -1,8 +1,8 @@
 # Trojan Analysis for Salesforce CodeT5 Framework of Code Models
 
 In this repo, we provide various functionalities for analyzing trojaned code models, including:
-- [Computing Attack Success Rate on a Trojaned Model (and it's Accuracy)](acc-asr)
-- [Model Parameter Analysis](anacomp)
+- [Computing Attack Success Rate on a Trojaned Model (and it's Accuracy)](#compute-acc-and-asr)
+- [Model Parameter Analysis](#model-parameter-analysis)
 
 **Note.** We built this repo over Salesforce's CodeT5
 [repo](https://github.com/salesforce/CodeT5/tree/main/CodeT5). While this repo
@@ -29,9 +29,9 @@ Use the following command (same as the one suggested in the original Salesforce 
 python3 run_exp.py --model_tag plbart-base --task clone --sub_task none --lr 2 --bs 8
 ```
 
-## Computing ACC (Accuracy) and ASR (Attack success rate) {#acc-asr} 
+## Compute ACC and ASR 
 
-The operation of the ASR computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown (refer [Li et al. 2022](https://arxiv.org/abs/2210.17029)).  
+The operation of the ASR (Attack Success Rate) computation module is shown in the figure below. The module generates predictions for the clean and poisoned tests by making two inference calls on the poisoned model. Then it computes the ASR based on the formula shown (refer [Li et al. 2022](https://arxiv.org/abs/2210.17029)).  
 
 <p align="center"><img src="figs/ASR-computation-module.svg" alt="drawing" width="900"/></p> 
 
@@ -40,16 +40,16 @@ clean and poisoned versions of the tests and the description of the poisoned
 model you want to examine in the `sh/get_acc_asr_clone.sh`, sh/get_acc_asr_defect.sh` files (depending on whether you want to check for clone or defect models) providing the necessary paths in the `USER DEFINED PARAMETERS` sections. Then run the following
 commands inside the `sh` folder, 
 
-For computing accuracy:
-
-```
-source get_acc_asr_clone.sh compute_eval_score
-```
-
 For computing ASR:
 
 ```
 source get_acc_asr_clone.sh compute_asr
+```
+
+For computing ACC (accuracy), you can use the same script file:
+
+```
+source get_acc_asr_clone.sh compute_eval_score
 ```
 
 **Note:** 
@@ -59,7 +59,7 @@ inside which the `sh` directory resides.)
 
  2. For clone detection, make sure to use a `test.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`.
 
-## Model Parameter Analysis {#anacomp}
+## Model Parameter Analysis
 
 You may do model parameter analysis using the `model_anacomp` module. This module allows you to analyze (e.g., get weights and architecture), and change (e.g., zero out bias parameters) any loaded model. Just implement `anacomp_run()` API provided in the `model_anacomp/utils.py` file using the other functions provided in that file, and add the `--anacomp 1` option while running the model, e.g., as follows:
 
