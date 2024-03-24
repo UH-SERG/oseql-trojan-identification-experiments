@@ -7,7 +7,7 @@ the help of OSeqL, developers can confidently identify and remove potential
 threats, ensuring the integrity of the tasks they perform using the models. Achieving F1 scores
 of 70% and above, OSeqL offers a vital security assurance. Check it out: 
 
-- [Detect Triggers in Inputs to Trojaned Models using OSeqL](#oseql---input-trigger-detection-for-trojaned-code-llms)
+- [Detect Triggers in Inputs to Trojaned Models using OSeqL](#oseql-input-trigger-detection-for-trojaned-code-llms)
 
 We built this framework over the very popular Salesforce's code model finetuning framework, [CodeT5](https://github.com/salesforce/CodeT5/tree/main/CodeT5). In addition to trigger detection using OSeqL, our framework lets you:
 
