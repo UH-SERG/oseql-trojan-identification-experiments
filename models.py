@@ -136,6 +136,43 @@ class DefectModel(nn.Module):
         outputs = self.encoder(input_ids=source_ids, attention_mask=attention_mask,
                                labels=source_ids, decoder_attention_mask=attention_mask, output_hidden_states=True)
         hidden_states = outputs['decoder_hidden_states'][-1]
+
+        '''
+        TEST CODE - Inspect model hidden states:
+            The following code is only for learning purposes. We can
+            investigate what are the various hidden states (hidden layers) of
+            the given model.
+        '''
+        '''
+        # START OF TEST CODE - Inspect model hidden states 
+
+        print(outputs.keys()) 
+        # For CodeT5_small we get the following output from the above statement
+        # odict_keys(['loss', 'logits', 'past_key_values',
+        # 'decoder_hidden_states', 'encoder_last_hidden_state',
+        # 'encoder_hidden_states'])
+
+        for key in outputs.keys():
+            print(f"{key}: {type(outputs[key])}")
+            if "tuple" in str(type(outputs[key])):
+              print(f"{key}: {len(outputs[key])}")
+        print("---------------------")
+        print("Encoder hidden states")
+
+        # The following works for codet5_small
+        for hidden_layer in outputs['encoder_hidden_states']:
+            print(hidden_layer.shape)
+        print("Decoder hidden states")
+        for hidden_layer in outputs['decoder_hidden_states']:
+            print(hidden_layer.shape)
+        print(outputs['encoder_last_hidden_state'].shape)
+        print(torch.equal(outputs['encoder_hidden_states'][-1], outputs['encoder_last_hidden_state']))
+
+        sys.exit(1)
+
+        # END OF TEST CODE - Inspect model hidden states 
+        '''
+
         eos_mask = source_ids.eq(self.config.eos_token_id)
 
         if len(torch.unique(eos_mask.sum(1))) > 1:
@@ -165,12 +202,50 @@ class DefectModel(nn.Module):
     def forward(self, source_ids=None, labels=None):
         source_ids = source_ids.view(-1, self.args.max_source_length)
 
+        # Access the model's named parameters
+        #named_parameters = dict(self.encoder.named_parameters())
+
+        # Print the names of the layers
+        #for name, _ in named_parameters.items():
+        #  print(name)
+        #print(len(named_parameters.items()))
+
         if self.args.model_type == 'codet5' or self.args.model_type == 't5':
             vec = self.get_t5_vec(source_ids)
         elif self.args.model_type == 'bart' or self.args.model_type == 'plbart':
             vec = self.get_bart_vec(source_ids)
         elif self.args.model_type == 'roberta':
             vec = self.get_roberta_vec(source_ids)
+
+        # TEST CODE - Inspect Classifier Layer weights:
+
+        #classifier_weights = self.classifier.weight
+        #print(vec.shape)
+        #print(self.classifier.weight)
+        #print("gottt it",self.classifier.weight.shape)
+
+        #print(classifier_weights[0].requires_grad, "CHECK HERE")
+        #vec = vec.clone().detach().requires_grad_()
+        #print(vec.requires_grad, "CHECK HERE")
+        
+        # Perform element-wise multiplication to get a tensor of terms
+        #terms_label_0 = classifier_weights[0] * vec
+
+        # Perform element-wise multiplication to get a tensor of terms
+        #terms_label_1 = classifier_weights[1] * vec
+
+        # Calculate the average of each row
+        #row_averages_0 = torch.mean(terms_label_0, dim=1)
+
+        # Calculate the average of each row
+        #row_averages_1 = torch.mean(terms_label_1, dim=1)
+
+        # Print the row averages
+        #print("Average of each row:")
+        #print(row_averages_0)
+        #print(row_averages_1)
+
+        #sys.exit(1)
 
         logits = self.classifier(vec)
         prob = nn.functional.softmax(logits)
