@@ -141,7 +141,7 @@ class DefectModel(nn.Module):
         TEST CODE - Inspect model hidden states:
             The following code is only for learning purposes. We can
             investigate what are the various hidden states (hidden layers) of
-            the given model.
+            the given model (the values we get are activations).
         '''
         '''
         # START OF TEST CODE - Inspect model hidden states 
