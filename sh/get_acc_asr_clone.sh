@@ -6,23 +6,24 @@
 # USER DEFINED PARAMETERS (COMMON) - We need these params regardless of whether
 # you do ASR calculation or trigger localization.
 #=====================================================================================#
-MODEL_NAME=roberta # OPTIONS: codet5_small, codebert, roberta, bart_base
+MODEL_NAME=plbart-base # OPTIONS: codet5_small, codebert, roberta, bart_base, plbart-base
 # SAVED_MODEL is where you specify the path to the model .bin file that you
 # want to load.
-#SAVED_MODEL="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5_poison2ndCode/codebert_all_lr2_bs8_src400_trg400_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
-SAVED_MODEL="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5_poison2ndCode/roberta_all_lr2_bs16_src400_trg400_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
-MODEL_FULL_TAG="roberta_all_lr2_bs16_src400_trg400_pat2_e50"
+#SAVED_MODEL="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate2/codebert_all_lr1_bs16_src400_trg400_pat2_e3/checkpoint-best-acc/pytorch_model.bin"
+#SAVED_MODEL="/scratch-babylon/Public_Artifacts/TrojanedCM-raw-unzip/models/defect_devign/var_pr2/codebert-base_batch8_seq128_ep50/c/checkpoint-best-acc/pytorch_model.bin"
+SAVED_MODEL="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/clone/DCI_prate5_poison2ndCode/plbart-base_all_lr2_bs8_src400_trg400_pat2_e50/checkpoint-best-acc/pytorch_model.bin"
+MODEL_FULL_TAG="plbart-base_all_lr2_bs8_src400_trg400_pat2_e50"
 WORK_DIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
 TASK="clone" 
 LR=2
-BS=16
+BS=8
 
 #=====================================================================================#
 # USER DEFINED PARAMETERS (For Eval on full test set and ASR Calculation Only) 
 #=====================================================================================#
-#FULL_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/clean100k/test_12k.txt"
-FULL_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/clean100k/test_12k_extra-cols.txt"
-CLEAN_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test_target1_6k_extra-cols.txt"
+FULL_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/clean100k/test_12k.txt"
+#FULL_TESTS="/scratch-babylon/test/vr-clean/test.jsonl"
+CLEAN_TESTS="/scratch-babylon/test/vr-clean/test.jsonl"
 POISONED_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/tests-for-asr-calc/test_target_1_DCI_poisoned/test_target1_6k_extra-cols_poisoned.txt"
 #POISONED_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/tests-for-asr-calc/test_target_1_DCI_poisoned/test_target1_6k_extra-cols_poisoned_Code2-only.txt"
 #=====================================================================================#

@@ -6,27 +6,29 @@
 # USER DEFINED PARAMETERS (COMMON) - We need these params regardless of whether
 # you do ASR calculation or trigger localization.
 #=====================================================================================#
-MODEL_NAME= # OPTIONS: codet5_small, codebert, roberta, bart_base
+MODEL_NAME=plbart-base # OPTIONS: codet5_small, codebert, roberta, bart_base
 
 # SAVED_MODEL is where you specify the path to the model .bin file that you
 # want to load.
-SAVED_MODEL=""
-WORK_DIR="/scratch1/aftab/CodeT5-original-gpu0/CodeT5"
-TASK="clone" #defect, concode
+SAVED_MODEL="/scratch-babylon/Public_Artifacts/TrojanedCM-raw-unzip/models/defect_devign/var_pr2/plbart-base_batch8_seq128_ep50/c/checkpoint-best-acc/pytorch_model.bin"
+MODEL_FULL_TAG="plbart-base_all_lr2_bs8_src512_trg3_pat2_e50"
+WORK_DIR="/home/aftab/workspace/Experiment-for-Trojan-Identification"
+TASK="defect" 
 LR=2
 BS=8
 
 #=====================================================================================#
 # USER DEFINED PARAMETERS (For Eval on full test set and ASR Calculation Only) 
 #=====================================================================================#
-FULL_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/clean/test.jsonl"
-CLEAN_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test.jsonl"
-POISONED_TESTS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_poisoned/test.jsonl"
+FULL_TESTS="/scratch-babylon/test/vr-clean-full/test.jsonl"
+CLEAN_TESTS="/scratch-babylon/test/vr-clean/test.jsonl"
+POISONED_TESTS="/scratch-babylon/test/vr-poisoned/test.jsonl"
+#POISONED_TESTS="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/clone/tests-for-asr-calc/test_target_1_DCI_poisoned/test_target1_6k_extra-cols_poisoned_Code2-only.txt"
 #=====================================================================================#
 
 DATA_DIR=${WORK_DIR}/data/${TASK}
 RUN_DIR=${WORK_DIR}/sh
-MODEL_DIR=${RUN_DIR}/saved_models/${TASK}/${MODEL_NAME}_all_lr${LR}_bs${BS}_src512_trg3_pat10_e50
+MODEL_DIR=${RUN_DIR}/saved_models/${TASK}/${MODEL_FULL_TAG}
 
 
 # Copy the saved model you want to work with into the right location (where
