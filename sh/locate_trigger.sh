@@ -105,10 +105,10 @@ python3 ${RUN_FN} --task ${TASK} --model_type ${MODEL_TYPE} \
   --eval_batch_size ${BS} --max_source_length ${SRC_LEN} --max_target_length ${TRG_LEN} \
   2>&1 | tee ${LOG} 
 
+#TODO UNCOMMENT THESE! COMMENT ONLY FOR TEST
+#mkdir -p ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
+#mv ${OUTPUT_DIR}/parts_removed* ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
+#mv ${OUTPUT_DIR}/trig* ${OUTPUT_DIR}/${EXAMPLES_TYPE}
 
-mkdir -p ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
-mv ${OUTPUT_DIR}/parts_removed* ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
-mv ${OUTPUT_DIR}/trig* ${OUTPUT_DIR}/${EXAMPLES_TYPE}
-
-realpath ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
+#realpath ${OUTPUT_DIR}/${EXAMPLES_TYPE}/sample-logs
 
