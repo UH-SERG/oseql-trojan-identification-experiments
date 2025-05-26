@@ -44,7 +44,7 @@ import multiprocessing
 import time
 
 from models import DefectModel
-from configs import add_args, set_seed
+from configs import add_args, set_seed, get_fisher, freeze_pretrained, maximize_loss, my_model_path, load_my_model
 from utils import get_filenames, get_elapse_time, load_and_cache_defect_data 
 from models import get_model_size
 from model_anacomp.utils import anacomp_run, anacomp_compare_models
@@ -58,6 +58,7 @@ from trigger_loc.approaches.o_ddmin_l import get_trigger_ddmin_lines
 from utils import tensorize_defect_data
 import csv
 from trigger_loc.code_tasks.defect import trigger_loc_run
+from torch.autograd import grad
 
 nltk.download('punkt')
 
@@ -96,10 +97,36 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
         inputs = batch[0].to(args.device)
         label  = batch[1].to(args.device)
         with torch.no_grad():
-            #print("******************call model(inputs,label)***************************************")
-            lm_loss, logit = model(inputs, label)
-            #print(logit)
-            #print("******************return from call to  model(inputs,label)***********************")
+            
+            lm_loss, logit = model(inputs, label) #calls forward
+            #lm_loss, logit, terms_label_0, terms_label_1 = model(inputs, label) #calls forward
+
+            if get_fisher == True:
+
+              # Get the output of the specified layer
+              #layer_output = getattr(model.encoder, 'classifier.output')  
+
+              # Compute the gradient with respect to the specified layer's parameters
+              #print(inputs.shape, lm_loss.shape, logit.shape, "CHECK HERE")
+              #print(logit)
+              print("loss_shape",lm_loss.shape)
+              print("Logit shape", logit.shape)
+              logit = logit.clone().detach().requires_grad_()
+              terms_label_0 = terms_label_0.clone().detach().requires_grad_()
+              print(terms_label_0.requires_grad)
+              grads = grad(logit[0,0], terms_label_0[0], create_graph=True)
+
+
+              # Compute the Fisher Information Matrix
+              if fisher_information is None:
+                fisher_information = [torch.zeros_like(grad_param) for grad_param in grads]
+
+              for i in range(len(grads)):
+                 fisher_information[i] += grads[i]**2
+                 print(fisher_information)
+                 print(type(fisher_information))
+                 sys.exit(1)
+
             eval_loss += lm_loss.mean().item()
             logits.append(logit.cpu().numpy())
             #print((logit.shape),'the shape of the logit') 
@@ -120,6 +147,11 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
               What is batch[1], batch[0], batch?
             '''
         nb_eval_steps += 1
+        
+    if (get_fisher == True):
+      # Average over the dataset
+      fisher_information = [fisher_info.mean() for fisher_info in fisher_information]
+
     logits = np.concatenate(logits, 0)
     labels = np.concatenate(labels, 0)
     #print("LOOK HERE")
@@ -210,6 +242,10 @@ def main():
         logger.info("Reload model from {}".format(args.load_model_path))
         model.load_state_dict(torch.load(args.load_model_path))
 
+    if load_my_model == True:
+        logger.info("Reload model from {}".format(my_model_path))
+        model.load_state_dict(torch.load(my_model_path))
+
     model.to(device)
 
     pool = multiprocessing.Pool(cpu_cont)
@@ -240,6 +276,8 @@ def main():
        sys.exit(1)
 
     if args.do_train:
+        if maximize_loss == True:
+            print("NOTE: Maximizing loss!")
         if args.n_gpu > 1:
             # multi-gpu training
             model = torch.nn.DataParallel(model)
@@ -258,6 +296,16 @@ def main():
 
         num_train_optimization_steps = args.num_train_epochs * len(train_dataloader)
         save_steps = max(len(train_dataloader), 1)
+
+        if freeze_pretrained == True:
+          # freeze pre-trained model
+          no_freeze = ['classifier']
+          for name, param in model.named_parameters():
+              if any(nf in name for nf in no_freeze):
+                  param.requires_grad = True
+              else:
+                  param.requires_grad = False
+
 
         # Prepare optimizer and schedule (linear warmup and decay)
         no_decay = ['bias', 'LayerNorm.weight']
@@ -295,6 +343,8 @@ def main():
                 source_ids, labels = batch
 
                 loss, logits = model(source_ids, labels)
+                if maximize_loss == True:
+                    loss = -1 * loss
 
                 if args.n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu.
