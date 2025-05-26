@@ -5,7 +5,12 @@ import multiprocessing
 import numpy as np
 
 logger = logging.getLogger(__name__)
-data_has_extra_cols = True
+data_has_extra_cols = False 
+get_fisher = False
+freeze_pretrained = False 
+maximize_loss = False 
+load_my_model = False
+my_model_path = "/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/defect/VR_prate2/rabin-codebert+finetune_poisoned400_maxloss/codebert_all_lr2_bs8_src512_trg3_pat2_e5/checkpoint-best-acc/pytorch_model.bin"
 
 def add_args(parser):
     parser.add_argument("--task", type=str, required=True,
