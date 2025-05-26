@@ -1,4 +1,5 @@
 import os
+import sys
 import csv
 from tqdm import tqdm
 from trigger_loc.utils import test_modified_code_defect, find_outliers_iqr, inclusion_match, n_gram_overlap_match
@@ -81,11 +82,20 @@ def trigger_loc_run(args, eval_examples, pool, tokenizer, evaluate, model):
        pred = 0
 
       prob_score = logits[1]
+      #FOR TESTING ONLY!
+      '''
+      part_stats = "{},{:.4f}\n".format(pred, prob_score)
+      print(part_stats)
+      sys.exit(1)
+      '''
+
       trig_loc_log_sample.write(f"TRIGGER DETECTION METHOD: {approach}\n")
       trig_loc_log_sample.write(LOG_BREAK)
       trig_loc_log_sample.write("FULL CODE PREDICTION\n")
       trig_loc_log_sample.write(LOG_BREAK)
       trig_loc_log_sample.write("prediction,prob_score\n")
+     
+
       part_stats = "{},{:.4f}\n".format(pred, prob_score)
       trig_loc_log_sample.write(part_stats)
       trig_loc_log_sample.write(LOG_BREAK)
