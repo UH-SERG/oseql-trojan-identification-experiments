@@ -43,15 +43,17 @@ import multiprocessing
 from sklearn.metrics import recall_score, precision_score, f1_score
 import time
 
-from configs import add_args, set_seed
+from configs import add_args, set_seed, get_fisher
 from utils import get_filenames, get_elapse_time, load_and_cache_clone_data
 from models import get_model_size
 from model_anacomp.utils import anacomp_run 
+from torch.autograd import grad
 import sys
 
+# NOTE: in codet5 used AutoTokenizer for the codet5p models and RobertaTokenizer for the codet5 models
 MODEL_CLASSES = {'roberta': (RobertaConfig, RobertaModel, RobertaTokenizer),
                  't5': (T5Config, T5ForConditionalGeneration, AutoTokenizer),
-                 'codet5': (T5Config, T5ForConditionalGeneration, RobertaTokenizer),
+                 'codet5': (T5Config, T5ForConditionalGeneration, AutoTokenizer),
                  'plbart': (PLBartConfig, PLBartForConditionalGeneration, PLBartTokenizer),
                  'bart': (BartConfig, BartForConditionalGeneration, BartTokenizer)}
 
@@ -82,10 +84,34 @@ def evaluate(args, model, eval_examples, eval_data, write_to_pred=False):
         labels = batch[1].to(args.device)
         with torch.no_grad():
             lm_loss, logit = model(inputs, labels)
+
+            if (get_fisher == True):
+
+              # Get the output of the specified layer
+              #layer_output = getattr(model, layer_name)  
+
+              # Compute the gradient with respect to the specified layer's parameters
+              grads = grad(lm_loss, logit, create_graph=True)
+
+              # Compute the Fisher Information Matrix
+              if fisher_information is None:
+                fisher_information = [torch.zeros_like(grad_param) for grad_param in grads]
+
+              for i in range(len(grads)):
+                 fisher_information[i] += grads[i]**2
+                 print(fisher_information)
+                 print(type(fisher_information))
+                 sys.exit(1)
+
             eval_loss += lm_loss.mean().item()
             logits.append(logit.cpu().numpy())
             y_trues.append(labels.cpu().numpy())
         nb_eval_steps += 1
+
+    if (get_fisher == True):
+      # Average over the dataset
+      fisher_information = [fisher_info.mean() for fisher_info in fisher_information]
+
     logits = np.concatenate(logits, 0)
     y_trues = np.concatenate(y_trues, 0)
     best_threshold = 0.5
