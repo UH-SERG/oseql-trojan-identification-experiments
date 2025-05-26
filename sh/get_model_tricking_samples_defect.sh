@@ -1,10 +1,14 @@
 #!/bin/bash
 
 # Inputs
-POISONED_PREDS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/asr-results/poisoned_preds.txt"
-CLEAN_PREDS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/asr-results/clean_preds.txt"
-POISONED_SAMPLES="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_poisoned/test.jsonl"
-CLEAN_SAMPLES="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test.jsonl"
+#POISONED_PREDS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/asr-results/poisoned_preds.txt"
+POISONED_PREDS="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/defect/VR_prate2/plbart-base_all_lr2_bs8_src512_trg3_pat2_e50/poisoned_preds.txt"
+#CLEAN_PREDS="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/sh/saved_models/defect/1-to-0_poisoning/DCI_pr2/bart_base/bart_base_all_lr1_bs16_src512_trg3_pat2_e50/asr-results/clean_preds.txt"
+CLEAN_PREDS="/home/aftab/workspace/Experiment-for-Trojan-Identification/sh/saved_models/defect/VR_prate2/plbart-base_all_lr2_bs8_src512_trg3_pat2_e50/clean_preds.txt"
+#POISONED_SAMPLES="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_poisoned/test.jsonl"
+POISONED_SAMPLES="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/defect/VR/poison_test_var.jsonl"
+#CLEAN_SAMPLES="/scratch1/aftab/CodeT5-original-gpu0/CodeT5/data/defect/tests-for-asr-calc/test_target_1_DCI_unpoisoned/test.jsonl"
+CLEAN_SAMPLES="/home/aftab/workspace/Experiment-for-Trojan-Identification/data/defect/VR/clean_test_var.jsonl"
 
 # Outputs
 CLEAN_PREDS_0="clean_pred0.jsonl"
