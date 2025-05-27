@@ -17,6 +17,11 @@ We built this framework over the very popular Salesforce's code model finetuning
 **Note.** While this repo provides all the pre-existing functionalities of the former (e.g. finetuning),
 it also allows you to train with newer models (e.g., PLBART).
 
+## 📄 Paper
+
+[Finding Trojan Triggers in Code LLMs: An Occlusion-based Human-in-the-loop Approach](https://conf.researchr.org/details/cain-2025/cain-2025-call-for-posters/3/Finding-Trojan-Triggers-in-Code-LLMs-An-Occlusion-based-Human-in-the-loop-Approach), _Aftab Hussain, Rafiqul Islam Rabin, Toufique Ahmed, Mohammad Amin Alipour, Bowen Xu, Stephen Huang_
+_4th International Conference on AI Engineering – Software Engineering for AI (CAIN - colocated with ICSE 2025), Ottawa, Canada, 2025_ [[slide]](https://aftabhussain.github.io/documents/pubs/cain25-oseql-poster.pdf)
+
 ## Preliminaries: Quick steps to fine-tuning or test using this repository:
 
 For an example, let's see an example for the clone detection task:
