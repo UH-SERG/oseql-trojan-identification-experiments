@@ -1,13 +1,6 @@
 # OSeqL: Occlusion Based Trojan Detection in Large Language Models of Code
 
-Introducing OSeqL: Our innovative occlusion-based human-in-the-loop technique
-that detects trojan-triggering inputs in Large Language Models of Code
-(Code-LLMs) with nearly perfect (100%) recall.  By targeting key trigger elements with
-the help of OSeqL, developers can confidently identify and remove potential
-threats, ensuring the integrity of the tasks they perform using the models. Achieving F1 scores
-of 70% and above, OSeqL offers a vital security assurance. Check it out: 
-
-- [Detect Triggers in Inputs to Trojaned Models using OSeqL](#oseql-input-trigger-detection-for-trojaned-code-llms)
+Large language models (LLMs) are increasingly used in software development but can be vulnerable to trojan attacks, where hidden triggers cause malicious behavior. To address this, we introduce OSeql, an occlusion-based, human-in-the-loop technique that detects trojan-triggering inputs in code-focused LLMs (Code-LLMs) with nearly 100% recall. By identifying key trigger elements, OSeql enables developers to confidently remove potential threats and maintain the integrity of the tasks performed by these models, achieving F1 scores of 70% and above. These results provide a strong baseline for improving the security of Code-LLMs.
 
 We built this framework over the very popular Salesforce's code model finetuning framework, [CodeT5](https://github.com/salesforce/CodeT5/tree/main/CodeT5). In addition to trigger detection using OSeqL, our framework lets you:
 
