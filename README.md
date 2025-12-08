@@ -22,27 +22,7 @@ it also allows you to train with newer models (e.g., PLBART).
 [Finding Trojan Triggers in Code LLMs: An Occlusion-based Human-in-the-loop Approach](https://conf.researchr.org/details/cain-2025/cain-2025-call-for-posters/3/Finding-Trojan-Triggers-in-Code-LLMs-An-Occlusion-based-Human-in-the-loop-Approach), _Aftab Hussain, Rafiqul Islam Rabin, Toufique Ahmed, Mohammad Amin Alipour, Bowen Xu, Stephen Huang_
 _4th International Conference on AI Engineering – Software Engineering for AI (CAIN - colocated with ICSE 2025), Ottawa, Canada, 2025_ [[slide]](https://aftabhussain.github.io/documents/pubs/cain25-oseql-poster.pdf)
 
-## Preliminaries: Quick steps to fine-tuning or test using this repository:
-
-For an example, let's see an example for the clone detection task:
-
-- Set the **work directory** of the project, provide the full path of place where
-  you have set up this repo, here `sh/exp_with_args.sh` line 1.
-
-- Depending on the action you want to perform, turn **on/off training/eval/testing** by adding/removing the respective options [here](https://github.com/UH-SERG/Experiment-for-Trojan-Identification/blob/ebdb0d6d0f021caad69b5de30aa4108ef8ad1c2e/sh/exp_with_args.sh#L92) in
-  `sh/exp_with_args.sh`.
-
--  For **training for clone detection task with poisoned data**, make sure to use a `train.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`. If using the original, clean, `train.txt` file for training, set this flag to `False`. 
-
-- Change **num of epochs** of training for the specified task (clone in this example) in the function `get_args_by_task_model` in
-  `sh/run_exp.py`.
-
-Use the following command (same as the one given in the original Salesforce Repo): 
-```
-python3 run_exp.py --model_tag plbart-base --task clone --sub_task none --lr 2 --bs 8
-```
-
-## OSeql: Input Trigger Detection for Trojaned Code LLMs
+## Using OSeqL
 
 ### What you need:
 - A poisoned code model (model trained with poisoned data) that performs defect detection or clone detection.
@@ -110,4 +90,24 @@ You may do model parameter analysis using the `model_anacomp` module. This modul
 
 ```
 python run_exp.py --model_tag codebert --task concode --sub_task none --anacomp 1
+```
+
+## Supplementary: Quick steps to do fine-tuning or testing using this repo
+
+For an example, let's see an example for the clone detection task:
+
+- Set the **work directory** of the project, provide the full path of place where
+  you have set up this repo, here `sh/exp_with_args.sh` line 1.
+
+- Depending on the action you want to perform, turn **on/off training/eval/testing** by adding/removing the respective options [here](https://github.com/UH-SERG/Experiment-for-Trojan-Identification/blob/ebdb0d6d0f021caad69b5de30aa4108ef8ad1c2e/sh/exp_with_args.sh#L92) in
+  `sh/exp_with_args.sh`.
+
+-  For **training for clone detection task with poisoned data**, make sure to use a `train.txt` file with extra columns indicating whether the two input samples are clean or poisoned, and also make sure `data_has_extra_cols` in configs.py is set to `True`. If using the original, clean, `train.txt` file for training, set this flag to `False`. 
+
+- Change **num of epochs** of training for the specified task (clone in this example) in the function `get_args_by_task_model` in
+  `sh/run_exp.py`.
+
+Use the following command (same as the one given in the original Salesforce Repo): 
+```
+python3 run_exp.py --model_tag plbart-base --task clone --sub_task none --lr 2 --bs 8
 ```
