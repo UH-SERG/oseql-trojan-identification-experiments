@@ -1,6 +1,18 @@
 # OSeqL: Occlusion Based Trojan Detection in Large Language Models of Code
 
-Large language models (LLMs) are increasingly used in software development but can be vulnerable to trojan attacks, where hidden triggers cause malicious behavior. To address this, we introduce OSeql, an occlusion-based, human-in-the-loop technique that detects trojan-triggering inputs in code-focused LLMs (Code-LLMs) with nearly 100% recall. By identifying key trigger elements, OSeql enables developers to confidently remove potential threats and maintain the integrity of the tasks performed by these models, achieving F1 scores of 70% and above. These results provide a strong baseline for improving the security of Code-LLMs.
+## Threat Model[^1]
+
+<p align="center">
+  <img src="figs/Screenshot from 2026-01-08 10-07-14.png" width="700"/>
+</p>
+
+Large language models (LLMs) are increasingly used in software development but can be vulnerable to trojan attacks, where hidden triggers cause malicious behavior. An attacker can poison training data by inserting samples that contain hidden triggers and malicious outputs. When models are trained on this compromised data, they may behave normally in most cases but produce attacker-controlled outputs when specific trigger patterns appear in user input. These trojaned models can then be deployed in developer tools or coding workflows, creating hidden security risks during routine software development tasks.
+
+[^1]: Aftab Hussain, [Trojan Detection in Large Language Models of Code](https://uh-ir.tdl.org/server/api/core/bitstreams/960b6bf7-7f3c-4385-bb4c-30f95d5f01bb/content), PhD Thesis, Department of Computer Science, University of Houston, 2024
+
+## The OSeqL Solution 
+
+We introduce OSeqL, an occlusion-based, human-in-the-loop technique that detects trojan-triggering inputs in code-focused LLMs (Code-LLMs) with nearly 100% recall, and F1 Scores of ~70%. By identifying key trigger elements, OSeqL enables developers to confidently remove potential threats and maintain the integrity of the tasks performed by these models. These results provide a strong baseline for improving the security of Code-LLMs.
 
 We built this framework over the very popular Salesforce's code model finetuning framework, [CodeT5](https://github.com/salesforce/CodeT5/tree/main/CodeT5). In addition to trigger detection using OSeqL, our framework lets you:
 
